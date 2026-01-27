@@ -42,13 +42,22 @@ func newTestCommand() *cobra.Command {
 	return cmd
 }
 
+// mustSet sets a flag value and fails the test if it errors.
+// This catches typos in flag names during test setup.
+func mustSet(t *testing.T, cmd *cobra.Command, name, value string) {
+	t.Helper()
+	if err := cmd.Flags().Set(name, value); err != nil {
+		t.Fatalf("failed to set flag %q: %v", name, err)
+	}
+}
+
 func TestFromCommand(t *testing.T) {
 	cmd := newTestCommand()
-	cmd.Flags().Set("output", "text")
-	cmd.Flags().Set("project", "my-project")
-	cmd.Flags().Set("environment", "staging")
-	cmd.Flags().Set("quiet", "true")
-	cmd.Flags().Set("no-cache", "true")
+	mustSet(t, cmd, "output", "text")
+	mustSet(t, cmd, "project", "my-project")
+	mustSet(t, cmd, "environment", "staging")
+	mustSet(t, cmd, "quiet", "true")
+	mustSet(t, cmd, "no-cache", "true")
 
 	cfg, err := FromCommand(cmd)
 	if err != nil {
@@ -113,7 +122,7 @@ func TestFromCommandEnvFallback(t *testing.T) {
 
 func TestFromCommandFlagOverridesEnv(t *testing.T) {
 	cmd := newTestCommand()
-	cmd.Flags().Set("project", "flag-project")
+	mustSet(t, cmd, "project", "flag-project")
 
 	// Set env var that should be overridden
 	t.Setenv("UPSUN_PROJECT", "env-project")

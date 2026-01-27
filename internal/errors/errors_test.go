@@ -114,6 +114,14 @@ func TestError(t *testing.T) {
 
 func TestWithDetail(t *testing.T) {
 	err := &CLIError{Code: "TEST"}
+
+	// Verify chaining returns the same error
+	result := err.WithDetail("foo", "bar")
+	if result != err {
+		t.Error("WithDetail should return the same error for chaining")
+	}
+
+	// Verify chaining works
 	err.WithDetail("foo", "bar").WithDetail("num", 42)
 
 	if err.Details["foo"] != "bar" {

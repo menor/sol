@@ -19,9 +19,8 @@ func TestIsSourceOperation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.sourceDir != "" {
-				t.Setenv("PLATFORM_SOURCE_DIR", tt.sourceDir)
-			}
+			// Always set env var to ensure known state, even if empty
+			t.Setenv("PLATFORM_SOURCE_DIR", tt.sourceDir)
 
 			if got := IsSourceOperation(); got != tt.want {
 				t.Errorf("IsSourceOperation() = %v, want %v", got, tt.want)

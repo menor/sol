@@ -24,11 +24,24 @@ func (e *CLIError) Error() string {
 	return e.Message
 }
 
+// ExitCode returns the appropriate exit code for this error
+func (e *CLIError) ExitCode() int {
+	switch e.Code {
+	case "AUTH_FAILED", "AUTH_EXPIRED", "AUTH_MISSING", "VALIDATION_ERROR", "NOT_FOUND":
+		return ExitUserError
+	case "API_ERROR", "RATE_LIMITED":
+		return ExitAPIError
+	case "INTERNAL_ERROR":
+		return ExitInternal
+	default:
+		return ExitUserError
+	}
+}
+
 // JSON returns the error as JSON bytes
-func (e *CLIError) JSON() []byte {
+func (e *CLIError) JSON() ([]byte, error) {
 	wrapper := map[string]any{"error": e}
-	data, _ := json.MarshalIndent(wrapper, "", "  ")
-	return data
+	return json.MarshalIndent(wrapper, "", "  ")
 }
 
 // WithDetail adds a detail to the error

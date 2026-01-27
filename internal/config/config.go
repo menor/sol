@@ -86,10 +86,12 @@ func CacheDir() (string, error) {
 	return filepath.Join(dir, "cache"), nil
 }
 
-// IsSourceOperation detects if running in Upsun source operation
+// IsSourceOperation detects if running in a Upsun source operation.
+// Source operations run in a container where the home directory isn't writable,
+// so we need to use /tmp for caches. PLATFORM_SOURCE_DIR is set only during
+// source operations, not during regular builds or runtime.
 func IsSourceOperation() bool {
-	return os.Getenv("PLATFORM_APPLICATION") != "" &&
-		os.Getenv("PLATFORM_SOURCE_OPERATION") != ""
+	return os.Getenv("PLATFORM_SOURCE_DIR") != ""
 }
 
 // Load loads configuration from file and environment

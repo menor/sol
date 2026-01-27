@@ -2,18 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
-)
-
-var (
-	// Global flags
-	outputFormat string
-	projectID    string
-	environment  string
-	quiet        bool
-	noCache      bool
 )
 
 var rootCmd = &cobra.Command{
@@ -39,12 +29,13 @@ func Execute() error {
 }
 
 func init() {
-	// Global flags available to all commands
-	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "json", "Output format: json, toon, text")
-	rootCmd.PersistentFlags().StringVarP(&projectID, "project", "p", "", "Project ID")
-	rootCmd.PersistentFlags().StringVarP(&environment, "environment", "e", "", "Environment name")
-	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Suppress non-essential output")
-	rootCmd.PersistentFlags().BoolVar(&noCache, "no-cache", false, "Bypass cache for this request")
+	// Global flags available to all commands.
+	// Subcommands extract these via cli.FromCommand(cmd).
+	rootCmd.PersistentFlags().StringP("output", "o", "json", "Output format: json, toon, text")
+	rootCmd.PersistentFlags().StringP("project", "p", "", "Project ID")
+	rootCmd.PersistentFlags().StringP("environment", "e", "", "Environment name")
+	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "Suppress non-essential output")
+	rootCmd.PersistentFlags().Bool("no-cache", false, "Bypass cache for this request")
 
 	// Version command
 	rootCmd.AddCommand(&cobra.Command{
@@ -54,29 +45,4 @@ func init() {
 			fmt.Println("sol version 0.1.0-dev")
 		},
 	})
-}
-
-// GetOutputFormat returns the output format flag value
-func GetOutputFormat() string {
-	return outputFormat
-}
-
-// GetProjectID returns project ID from flag, config, or environment
-func GetProjectID() string {
-	if projectID != "" {
-		return projectID
-	}
-	// TODO: read from config file
-	// TODO: read from PLATFORM_PROJECT env var
-	return os.Getenv("UPSUN_PROJECT")
-}
-
-// GetEnvironment returns environment from flag, config, or environment
-func GetEnvironment() string {
-	if environment != "" {
-		return environment
-	}
-	// TODO: read from config file
-	// TODO: read from PLATFORM_BRANCH env var
-	return os.Getenv("UPSUN_ENVIRONMENT")
 }

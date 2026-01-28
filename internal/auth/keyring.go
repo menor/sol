@@ -16,6 +16,10 @@ const (
 	KeyToken = "oauth_token" // Stores the full OAuth token as JSON
 )
 
+// TokenExpiryBuffer is how early we consider a token expired.
+// This avoids edge cases where a token expires mid-request.
+const TokenExpiryBuffer = 30 * time.Second
+
 // StoredToken represents an OAuth token persisted in the keyring.
 // We store all token data as a single JSON blob rather than separate entries
 // to keep the keyring tidy and ensure atomic updates.
@@ -28,12 +32,12 @@ type StoredToken struct {
 }
 
 // IsExpired returns true if the access token has expired.
-// We consider it expired 30 seconds early to avoid edge cases.
+// We consider it expired TokenExpiryBuffer early to avoid edge cases.
 func (t *StoredToken) IsExpired() bool {
 	if t.Expiry.IsZero() {
 		return false // No expiry means it doesn't expire
 	}
-	return time.Now().Add(30 * time.Second).After(t.Expiry)
+	return time.Now().Add(TokenExpiryBuffer).After(t.Expiry)
 }
 
 // SaveToken stores an OAuth token in the OS keychain.

@@ -21,7 +21,9 @@ func openBrowser(url string) error {
 		cmd = exec.Command("xdg-open", url)
 	case "windows":
 		// Windows requires using cmd /c start
-		cmd = exec.Command("cmd", "/c", "start", url)
+		// Empty string "" is the window title - required before URL to prevent
+		// shell metacharacters in the URL from being interpreted as commands
+		cmd = exec.Command("cmd", "/c", "start", "", url)
 	default:
 		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
 	}

@@ -48,6 +48,24 @@ Default output is JSON. The `--output` flag supports:
 - `toon` - token-optimized notation (not yet implemented)
 - `text` - human-readable text
 
+### Config Pattern (IMPORTANT)
+
+All commands should use `cli.FromCommand(cmd)` to extract configuration:
+
+```go
+func runMyCommand(cmd *cobra.Command, args []string) error {
+    cfg, err := cli.FromCommand(cmd)
+    if err != nil {
+        return err
+    }
+
+    // Use cfg.Formatter() for output - respects --output flag
+    return cfg.Formatter().Write(result)
+}
+```
+
+**Never use `output.New("json")` directly** - this ignores the user's `--output` flag.
+
 ## Development
 
 ### Building

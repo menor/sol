@@ -98,8 +98,10 @@ func TestAuthMethodKeychain(t *testing.T) {
 		t.Skip("skipping keyring test in short mode")
 	}
 
-	// Ensure no env var
-	// Note: t.Setenv with empty string ensures it's unset for this test
+	// Ensure env var is empty (not set to a value)
+	// Note: t.Setenv("", "") sets to empty string, not unset - but our code
+	// checks `!= ""` so empty string behaves the same as unset
+	t.Setenv(EnvTokenVar, "")
 
 	// Save token to keyring
 	token := &StoredToken{

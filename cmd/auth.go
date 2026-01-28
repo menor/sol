@@ -8,8 +8,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"lab.plat.farm/menor/sol/internal/auth"
+	"lab.plat.farm/menor/sol/internal/cli"
 	"lab.plat.farm/menor/sol/internal/errors"
-	"lab.plat.farm/menor/sol/internal/output"
 )
 
 func init() {
@@ -72,10 +72,13 @@ func runLogin(cmd *cobra.Command, args []string) error {
 	}
 
 	// Build OAuth config and authorization URL
-	cfg := auth.OAuthConfig(redirectURL)
-	authURL := auth.AuthorizationURL(cfg, pkce, state)
+	oauthCfg := auth.OAuthConfig(redirectURL)
+	authURL := auth.AuthorizationURL(oauthCfg, pkce, state)
 
 	// Open browser
+	// Note: We intentionally print the full URL as a fallback when browser
+	// doesn't open. The URL contains a state parameter (for CSRF protection)
+	// but no secrets - it's safe to display.
 	fmt.Fprintln(os.Stderr, "Opening browser for authentication...")
 	fmt.Fprintln(os.Stderr, "If the browser doesn't open, visit this URL:")
 	fmt.Fprintln(os.Stderr, authURL)
@@ -111,7 +114,7 @@ func runLogin(cmd *cobra.Command, args []string) error {
 	// Exchange code for tokens
 	fmt.Fprintln(os.Stderr, "Exchanging authorization code for tokens...")
 
-	token, err := auth.ExchangeCode(ctx, cfg, result.Code, pkce)
+	token, err := auth.ExchangeCode(ctx, oauthCfg, result.Code, pkce)
 	if err != nil {
 		return errors.NewAuthError(fmt.Sprintf("token exchange failed: %v", err))
 	}
@@ -124,9 +127,12 @@ func runLogin(cmd *cobra.Command, args []string) error {
 
 	fmt.Fprintln(os.Stderr, "Authentication successful!")
 
-	// Output result as JSON for agents
-	formatter := output.New("json")
-	return formatter.Write(map[string]any{
+	// Output result using Config pattern (respects --output flag)
+	cfg, err := cli.FromCommand(cmd)
+	if err != nil {
+		return err
+	}
+	return cfg.Formatter().Write(map[string]any{
 		"status":     "authenticated",
 		"expires_at": token.Expiry.Format(time.RFC3339),
 	})
@@ -153,8 +159,11 @@ func runLogout(cmd *cobra.Command, args []string) error {
 
 	fmt.Fprintln(os.Stderr, "Logged out successfully.")
 
-	formatter := output.New("json")
-	return formatter.Write(map[string]any{
+	cfg, err := cli.FromCommand(cmd)
+	if err != nil {
+		return err
+	}
+	return cfg.Formatter().Write(map[string]any{
 		"status": "logged_out",
 	})
 }
@@ -167,10 +176,14 @@ var authInfoCmd = &cobra.Command{
 }
 
 func runAuthInfo(cmd *cobra.Command, args []string) error {
+	cfg, err := cli.FromCommand(cmd)
+	if err != nil {
+		return err
+	}
+
 	// Check for env var first (CI path)
 	if envToken := os.Getenv("UPSUN_TOKEN"); envToken != "" {
-		formatter := output.New("json")
-		return formatter.Write(map[string]any{
+		return cfg.Formatter().Write(map[string]any{
 			"authenticated": true,
 			"method":        "environment_variable",
 			"variable":      "UPSUN_TOKEN",
@@ -183,10 +196,8 @@ func runAuthInfo(cmd *cobra.Command, args []string) error {
 		return errors.NewInternalError(fmt.Sprintf("load token: %v", err))
 	}
 
-	formatter := output.New("json")
-
 	if token == nil {
-		return formatter.Write(map[string]any{
+		return cfg.Formatter().Write(map[string]any{
 			"authenticated": false,
 			"hint":          "Run 'sol auth:login' to authenticate",
 		})
@@ -206,5 +217,5 @@ func runAuthInfo(cmd *cobra.Command, args []string) error {
 		info["hint"] = "Token expired. Run 'sol auth:login' to re-authenticate"
 	}
 
-	return formatter.Write(info)
+	return cfg.Formatter().Write(info)
 }

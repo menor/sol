@@ -4,6 +4,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"lab.plat.farm/menor/sol/internal/output"
 )
 
 // Config holds all CLI configuration extracted from flags, env vars, and config file.
@@ -65,6 +67,12 @@ func FromCommand(cmd *cobra.Command) (*Config, error) {
 	cfg.NoCache = noCache
 
 	return cfg, nil
+}
+
+// Formatter returns an output formatter configured for this Config.
+// Use this instead of output.New() directly to ensure --output flag is respected.
+func (c *Config) Formatter() output.Formatter {
+	return output.New(c.Output)
 }
 
 // firstNonEmpty returns the first non-empty string from the arguments.

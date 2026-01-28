@@ -84,9 +84,12 @@ func (s *keyringTokenSource) Token() (*oauth2.Token, error) {
 		return nil, fmt.Errorf("refresh token: %w (run 'sol auth:login' to re-authenticate)", err)
 	}
 
-	// Update stored token
+	// Update stored token, preserving refresh token if not returned
+	oldRefreshToken := s.stored.RefreshToken
 	s.stored = TokenToStored(newToken)
-	s.stored.RefreshToken = newToken.RefreshToken // Preserve refresh token if not returned
+	if s.stored.RefreshToken == "" {
+		s.stored.RefreshToken = oldRefreshToken
+	}
 
 	// Persist to keyring
 	if err := SaveToken(s.stored); err != nil {

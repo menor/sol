@@ -140,9 +140,13 @@ func StartCallbackServer(ctx context.Context) (*http.Server, string, <-chan Call
 		}
 
 		// Send result to channel (non-blocking)
-		select {
-		case resultChan <- result:
-		default:
+		// Only send if we have an actual OAuth response (code or error)
+		// This prevents favicon.ico or other browser requests from racing
+		if result.Code != "" || result.Error != "" {
+			select {
+			case resultChan <- result:
+			default:
+			}
 		}
 	})
 

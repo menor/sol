@@ -6,11 +6,22 @@ import (
 	"runtime"
 )
 
-// openBrowser opens a URL in the user's default browser.
+// SystemBrowser implements BrowserOpener using OS-specific commands.
+type SystemBrowser struct{}
+
+// Ensure SystemBrowser implements BrowserOpener.
+var _ BrowserOpener = (*SystemBrowser)(nil)
+
+// Open opens a URL in the user's default browser.
 // It uses OS-specific commands:
 //   - macOS: open
 //   - Linux: xdg-open
 //   - Windows: start (via cmd)
+func (b *SystemBrowser) Open(url string) error {
+	return openBrowser(url)
+}
+
+// openBrowser is the internal implementation.
 func openBrowser(url string) error {
 	var cmd *exec.Cmd
 

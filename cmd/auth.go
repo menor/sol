@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -39,102 +38,39 @@ variable instead of interactive login.`,
 
 func runLogin(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	force, _ := cmd.Flags().GetBool("force")
-
-	// Check if already logged in
-	if !force && auth.HasToken() {
-		token, err := auth.LoadToken()
-		if err == nil && token != nil && !token.IsExpired() {
-			fmt.Fprintln(os.Stderr, "Already logged in. Use --force to re-authenticate.")
-			return nil
-		}
-	}
-
-	fmt.Fprintln(os.Stderr, "Starting authentication...")
-
-	// Start callback server
-	server, redirectURL, resultChan, err := auth.StartCallbackServer(ctx)
-	if err != nil {
-		return errors.NewInternalError(fmt.Sprintf("start callback server: %v", err))
-	}
-	defer server.Shutdown(ctx)
-
-	// Generate PKCE parameters
-	pkce, err := auth.GeneratePKCE()
-	if err != nil {
-		return errors.NewInternalError(fmt.Sprintf("generate PKCE: %v", err))
-	}
-
-	// Generate state for CSRF protection
-	state, err := auth.GenerateState()
-	if err != nil {
-		return errors.NewInternalError(fmt.Sprintf("generate state: %v", err))
-	}
-
-	// Build OAuth config and authorization URL
-	oauthCfg := auth.OAuthConfig(redirectURL)
-	authURL := auth.AuthorizationURL(oauthCfg, pkce, state)
-
-	// Open browser
-	// Note: We intentionally print the full URL as a fallback when browser
-	// doesn't open. The URL contains a state parameter (for CSRF protection)
-	// but no secrets - it's safe to display.
-	fmt.Fprintln(os.Stderr, "Opening browser for authentication...")
-	fmt.Fprintln(os.Stderr, "If the browser doesn't open, visit this URL:")
-	fmt.Fprintln(os.Stderr, authURL)
-	fmt.Fprintln(os.Stderr)
-
-	if err := auth.OpenBrowser(authURL); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: couldn't open browser: %v\n", err)
-	}
-
-	// Wait for callback (with timeout)
-	fmt.Fprintln(os.Stderr, "Waiting for authentication...")
-
-	var result auth.CallbackResult
-	select {
-	case result = <-resultChan:
-		// Got callback
-	case <-time.After(5 * time.Minute):
-		return errors.NewAuthError("authentication timed out after 5 minutes")
-	case <-ctx.Done():
-		return errors.NewAuthError("authentication cancelled")
-	}
-
-	// Check for errors from OAuth provider
-	if result.Error != "" {
-		return errors.NewAuthError(fmt.Sprintf("authentication failed: %s", result.Error))
-	}
-
-	// Validate state (CSRF protection)
-	if result.State != state {
-		return errors.NewAuthError("state mismatch - possible CSRF attack")
-	}
-
-	// Exchange code for tokens
-	fmt.Fprintln(os.Stderr, "Exchanging authorization code for tokens...")
-
-	token, err := auth.ExchangeCode(ctx, oauthCfg, result.Code, pkce)
-	if err != nil {
-		return errors.NewAuthError(fmt.Sprintf("token exchange failed: %v", err))
-	}
-
-	// Save tokens to keyring
-	stored := auth.TokenToStored(token)
-	if err := auth.SaveToken(stored); err != nil {
-		return errors.NewInternalError(fmt.Sprintf("save token: %v", err))
-	}
-
-	fmt.Fprintln(os.Stderr, "Authentication successful!")
-
-	// Output result using Config pattern (respects --output flag)
 	cfg, err := cli.FromCommand(cmd)
 	if err != nil {
 		return err
 	}
+
+	force, _ := cmd.Flags().GetBool("force")
+
+	// Create service with default (production) dependencies
+	svc := auth.DefaultService()
+
+	// Progress callback prints to stderr (only if not quiet)
+	progress := func(msg string) {
+		if !cfg.Quiet {
+			fmt.Fprintln(os.Stderr, msg)
+		}
+	}
+
+	result, err := svc.Login(ctx, auth.LoginOptions{
+		Force:      force,
+		OnProgress: progress,
+	})
+	if err != nil {
+		// Check for "already logged in" which isn't really an error
+		if err.Error() == "already logged in (use force option to re-authenticate)" {
+			progress("Already logged in. Use --force to re-authenticate.")
+			return nil
+		}
+		return errors.NewAuthError(err.Error())
+	}
+
 	return cfg.Formatter().Write(map[string]any{
 		"status":     "authenticated",
-		"expires_at": token.Expiry.Format(time.RFC3339),
+		"expires_at": result.ExpiresAt,
 	})
 }
 
@@ -148,21 +84,35 @@ This deletes your access and refresh tokens from the system keychain.`,
 }
 
 func runLogout(cmd *cobra.Command, args []string) error {
-	if !auth.HasToken() {
-		fmt.Fprintln(os.Stderr, "Not currently logged in.")
-		return nil
-	}
-
-	if err := auth.DeleteToken(); err != nil {
-		return errors.NewInternalError(fmt.Sprintf("delete token: %v", err))
-	}
-
-	fmt.Fprintln(os.Stderr, "Logged out successfully.")
-
+	ctx := cmd.Context()
 	cfg, err := cli.FromCommand(cmd)
 	if err != nil {
 		return err
 	}
+
+	svc := auth.DefaultService()
+
+	// Check if logged in first to give appropriate message
+	status, err := svc.Status(ctx)
+	if err != nil {
+		return errors.NewInternalError(fmt.Sprintf("check status: %v", err))
+	}
+
+	if !status.Authenticated || status.Method == "environment_variable" {
+		if !cfg.Quiet {
+			fmt.Fprintln(os.Stderr, "Not currently logged in via keychain.")
+		}
+		return nil
+	}
+
+	if err := svc.Logout(ctx); err != nil {
+		return errors.NewInternalError(fmt.Sprintf("logout: %v", err))
+	}
+
+	if !cfg.Quiet {
+		fmt.Fprintln(os.Stderr, "Logged out successfully.")
+	}
+
 	return cfg.Formatter().Write(map[string]any{
 		"status": "logged_out",
 	})
@@ -176,45 +126,41 @@ var authInfoCmd = &cobra.Command{
 }
 
 func runAuthInfo(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	cfg, err := cli.FromCommand(cmd)
 	if err != nil {
 		return err
 	}
 
-	// Check for env var first (CI path)
-	if envToken := os.Getenv("UPSUN_TOKEN"); envToken != "" {
-		return cfg.Formatter().Write(map[string]any{
-			"authenticated": true,
-			"method":        "environment_variable",
-			"variable":      "UPSUN_TOKEN",
-		})
-	}
+	svc := auth.DefaultService()
 
-	// Check keyring
-	token, err := auth.LoadToken()
+	status, err := svc.Status(ctx)
 	if err != nil {
-		return errors.NewInternalError(fmt.Sprintf("load token: %v", err))
+		return errors.NewInternalError(fmt.Sprintf("get status: %v", err))
 	}
 
-	if token == nil {
-		return cfg.Formatter().Write(map[string]any{
-			"authenticated": false,
-			"hint":          "Run 'sol auth:login' to authenticate",
-		})
-	}
-
+	// Build response map
 	info := map[string]any{
-		"authenticated": true,
-		"method":        "keychain",
-		"expired":       token.IsExpired(),
+		"authenticated": status.Authenticated,
 	}
 
-	if !token.Expiry.IsZero() {
-		info["expires_at"] = token.Expiry.Format(time.RFC3339)
+	if status.Method != "" && status.Method != "none" {
+		info["method"] = status.Method
+		if status.Method == "environment_variable" {
+			info["variable"] = auth.EnvTokenVar
+		}
 	}
 
-	if token.IsExpired() {
-		info["hint"] = "Token expired. Run 'sol auth:login' to re-authenticate"
+	if status.ExpiresAt != "" {
+		info["expires_at"] = status.ExpiresAt
+	}
+
+	if status.Expired {
+		info["expired"] = true
+	}
+
+	if status.Hint != "" {
+		info["hint"] = status.Hint
 	}
 
 	return cfg.Formatter().Write(info)

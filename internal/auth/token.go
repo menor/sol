@@ -57,6 +57,12 @@ func (s *envTokenSource) Token() (*oauth2.Token, error) {
 }
 
 // keyringTokenSource provides tokens from the keyring with automatic refresh.
+//
+// CONTEXT LIMITATION: This struct stores a context.Context, which is generally
+// an anti-pattern in Go. However, this is a constraint of the oauth2.TokenSource
+// interface, which doesn't accept context in its Token() method. If the stored
+// context is cancelled before Token() is called, refresh operations will fail.
+// For long-lived token sources, consider creating new ones with fresh contexts.
 type keyringTokenSource struct {
 	ctx    context.Context
 	stored *StoredToken
@@ -93,8 +99,8 @@ func (s *keyringTokenSource) Token() (*oauth2.Token, error) {
 
 	// Persist to keyring
 	if err := SaveToken(s.stored); err != nil {
-		// Log but don't fail - we have a valid token
-		fmt.Fprintf(os.Stderr, "warning: couldn't save refreshed token to keyring: %v\n", err)
+		// Warn but don't fail - we have a valid token
+		warnFunc("warning: couldn't save refreshed token to keyring: %v\n", err)
 	}
 
 	return newToken, nil
@@ -135,4 +141,14 @@ func AuthMethod() string {
 		return "keychain"
 	}
 	return "none"
+}
+
+// getEnv is a wrapper around os.Getenv.
+// It's a variable so it can be overridden in tests.
+var getEnv = os.Getenv
+
+// warnFunc is called to emit warning messages.
+// It's a variable so it can be overridden in tests.
+var warnFunc = func(format string, args ...any) {
+	fmt.Fprintf(os.Stderr, format, args...)
 }

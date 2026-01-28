@@ -84,3 +84,29 @@ func HasToken() bool {
 	_, err := keyring.Get(ServiceName, KeyToken)
 	return err == nil
 }
+
+// KeyringStore implements TokenStore using the OS keychain.
+type KeyringStore struct{}
+
+// Ensure KeyringStore implements TokenStore.
+var _ TokenStore = (*KeyringStore)(nil)
+
+// Save stores the token in the OS keychain.
+func (s *KeyringStore) Save(token *StoredToken) error {
+	return SaveToken(token)
+}
+
+// Load retrieves the token from the OS keychain.
+func (s *KeyringStore) Load() (*StoredToken, error) {
+	return LoadToken()
+}
+
+// Delete removes the token from the OS keychain.
+func (s *KeyringStore) Delete() error {
+	return DeleteToken()
+}
+
+// Exists returns true if a token exists in the keychain.
+func (s *KeyringStore) Exists() bool {
+	return HasToken()
+}

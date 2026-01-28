@@ -20,10 +20,29 @@ go install lab.plat.farm/menor/sol@latest
 
 ## Usage
 
+### Authentication
+
 ```bash
-# Authenticate
+# Log in (opens browser for OAuth)
 sol auth:login
 
+# Check authentication status
+sol auth:info
+
+# Log out (removes stored credentials)
+sol auth:logout
+```
+
+For CI/automated environments, use an API token instead of interactive login:
+
+```bash
+export UPSUN_TOKEN=your-api-token
+sol auth:info  # Shows authentication via environment variable
+```
+
+### Commands (Coming Soon)
+
+```bash
 # List projects (JSON output)
 sol project:list
 

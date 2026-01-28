@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"html"
 	"net"
 	"net/http"
 	"time"
@@ -133,7 +134,8 @@ func StartCallbackServer(ctx context.Context) (*http.Server, string, <-chan Call
 		// Send a nice response to the browser
 		if result.Error != "" {
 			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, "<html><body><h1>Authentication Failed</h1><p>%s</p><p>You can close this window.</p></body></html>", result.Error)
+			// Escape error to prevent HTML injection (low risk since local callback)
+			fmt.Fprintf(w, "<html><body><h1>Authentication Failed</h1><p>%s</p><p>You can close this window.</p></body></html>", html.EscapeString(result.Error))
 		} else {
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprint(w, "<html><body><h1>Authentication Successful</h1><p>You can close this window and return to the terminal.</p></body></html>")

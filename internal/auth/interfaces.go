@@ -1,6 +1,6 @@
 package auth
 
-import "context"
+import "time"
 
 // TokenStore defines the interface for persisting OAuth tokens.
 // Implementations include KeyringStore (OS keychain) and MemoryStore (testing).
@@ -27,8 +27,8 @@ type LoginOptions struct {
 	Force bool
 	// OnProgress is called with status messages during login
 	OnProgress ProgressFunc
-	// Timeout for waiting for OAuth callback (0 = default)
-	Timeout context.Context
+	// Timeout for waiting for OAuth callback (0 = DefaultAuthTimeout)
+	Timeout time.Duration
 }
 
 // AuthStatus represents the current authentication state.

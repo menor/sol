@@ -168,6 +168,30 @@ return fmt.Errorf("load token: %w", err)
 return fmt.Errorf("load token: %v", err)
 ```
 
+### Sentinel Errors (IMPORTANT)
+
+Never compare error strings. Use sentinel errors and `errors.Is()`:
+
+```go
+// Define sentinel in package
+var ErrAlreadyLoggedIn = errors.New("already logged in")
+
+// Return sentinel from service
+if alreadyLoggedIn {
+    return nil, ErrAlreadyLoggedIn
+}
+
+// Check with errors.Is() in caller
+if errors.Is(err, auth.ErrAlreadyLoggedIn) {
+    // Handle specifically
+}
+```
+
+**Never do this** - breaks if message changes:
+```go
+if err.Error() == "already logged in" {  // FRAGILE
+```
+
 ### Context in Structs (Avoid)
 
 Don't store `context.Context` in structs - it's an anti-pattern. Pass context to methods.

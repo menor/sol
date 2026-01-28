@@ -2,12 +2,19 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 )
 
 // DefaultAuthTimeout is the default time to wait for OAuth callback.
 const DefaultAuthTimeout = 5 * time.Minute
+
+// Sentinel errors for authentication operations.
+var (
+	// ErrAlreadyLoggedIn is returned when login is attempted but user is already authenticated.
+	ErrAlreadyLoggedIn = errors.New("already logged in")
+)
 
 // Service orchestrates authentication operations.
 // It uses dependency injection for storage and browser, enabling testing.
@@ -41,7 +48,7 @@ func (s *Service) Login(ctx context.Context, opts LoginOptions) (*LoginResult, e
 	if !opts.Force && s.store.Exists() {
 		token, err := s.store.Load()
 		if err == nil && token != nil && !token.IsExpired() {
-			return nil, fmt.Errorf("already logged in (use force option to re-authenticate)")
+			return nil, ErrAlreadyLoggedIn
 		}
 	}
 
@@ -81,13 +88,13 @@ func (s *Service) Login(ctx context.Context, opts LoginOptions) (*LoginResult, e
 	// Wait for callback
 	progress("Waiting for authentication...")
 
-	// Use provided context or create one with default timeout
-	waitCtx := ctx
-	if opts.Timeout == nil {
-		var cancel context.CancelFunc
-		waitCtx, cancel = context.WithTimeout(ctx, DefaultAuthTimeout)
-		defer cancel()
+	// Create context with timeout
+	timeout := opts.Timeout
+	if timeout == 0 {
+		timeout = DefaultAuthTimeout
 	}
+	waitCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 
 	var result CallbackResult
 	select {
@@ -144,7 +151,7 @@ func (s *Service) Status(ctx context.Context) (*AuthStatus, error) {
 	status := &AuthStatus{}
 
 	// Check for env var first (CI path)
-	if envToken := envTokenValue(); envToken != "" {
+	if envToken := getEnv(EnvTokenVar); envToken != "" {
 		status.Authenticated = true
 		status.Method = "environment_variable"
 		return status, nil
@@ -176,10 +183,4 @@ func (s *Service) Status(ctx context.Context) (*AuthStatus, error) {
 	}
 
 	return status, nil
-}
-
-// envTokenValue returns the UPSUN_TOKEN env var value.
-// Extracted to a function so it can be overridden in tests if needed.
-var envTokenValue = func() string {
-	return getEnv(EnvTokenVar)
 }

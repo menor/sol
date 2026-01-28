@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -8,7 +9,7 @@ import (
 
 	"lab.plat.farm/menor/sol/internal/auth"
 	"lab.plat.farm/menor/sol/internal/cli"
-	"lab.plat.farm/menor/sol/internal/errors"
+	clierrors "lab.plat.farm/menor/sol/internal/errors"
 )
 
 func init() {
@@ -60,12 +61,12 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		OnProgress: progress,
 	})
 	if err != nil {
-		// Check for "already logged in" which isn't really an error
-		if err.Error() == "already logged in (use force option to re-authenticate)" {
+		// Already logged in is not an error - just inform the user
+		if errors.Is(err, auth.ErrAlreadyLoggedIn) {
 			progress("Already logged in. Use --force to re-authenticate.")
 			return nil
 		}
-		return errors.NewAuthError(err.Error())
+		return clierrors.NewAuthError("authentication failed").WithDetail("cause", err.Error())
 	}
 
 	return cfg.Formatter().Write(map[string]any{
@@ -95,7 +96,7 @@ func runLogout(cmd *cobra.Command, args []string) error {
 	// Check if logged in first to give appropriate message
 	status, err := svc.Status(ctx)
 	if err != nil {
-		return errors.NewInternalError(fmt.Sprintf("check status: %v", err))
+		return clierrors.NewInternalError(fmt.Sprintf("check status: %v", err))
 	}
 
 	if !status.Authenticated || status.Method == "environment_variable" {
@@ -106,7 +107,7 @@ func runLogout(cmd *cobra.Command, args []string) error {
 	}
 
 	if err := svc.Logout(ctx); err != nil {
-		return errors.NewInternalError(fmt.Sprintf("logout: %v", err))
+		return clierrors.NewInternalError(fmt.Sprintf("logout: %v", err))
 	}
 
 	if !cfg.Quiet {
@@ -136,7 +137,7 @@ func runAuthInfo(cmd *cobra.Command, args []string) error {
 
 	status, err := svc.Status(ctx)
 	if err != nil {
-		return errors.NewInternalError(fmt.Sprintf("get status: %v", err))
+		return clierrors.NewInternalError(fmt.Sprintf("get status: %v", err))
 	}
 
 	// Build response map

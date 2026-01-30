@@ -1,75 +1,258 @@
 package api
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"net/url"
+	"path"
 	"time"
+
+	"golang.org/x/oauth2"
+
+	"lab.plat.farm/menor/sol/internal/auth"
 )
 
-// Client is the Upsun API client
+const (
+	// DefaultBaseURL is the Upsun API base URL.
+	DefaultBaseURL = "https://api.upsun.com"
+
+	// DefaultTimeout is the default HTTP request timeout.
+	DefaultTimeout = 30 * time.Second
+)
+
+// Client is the Upsun API client.
 type Client struct {
 	httpClient *http.Client
-	baseURL    string
-	token      string
+	baseURL    *url.URL
 }
 
-// ClientOption configures the client
-type ClientOption func(*Client)
+// ClientOption configures the client.
+type ClientOption func(*clientConfig)
 
-// WithBaseURL sets a custom base URL
-func WithBaseURL(url string) ClientOption {
-	return func(c *Client) {
-		c.baseURL = url
+// clientConfig holds configuration for building a Client.
+type clientConfig struct {
+	baseURL     string
+	tokenSource oauth2.TokenSource
+	timeout     time.Duration
+	retryConfig *RetryConfig
+	logFunc     func(format string, args ...any)
+}
+
+// WithBaseURL sets a custom base URL.
+func WithBaseURL(baseURL string) ClientOption {
+	return func(c *clientConfig) {
+		c.baseURL = baseURL
 	}
 }
 
-// WithToken sets the authentication token
-func WithToken(token string) ClientOption {
-	return func(c *Client) {
-		c.token = token
+// WithTokenSource sets the token source for authentication.
+func WithTokenSource(ts oauth2.TokenSource) ClientOption {
+	return func(c *clientConfig) {
+		c.tokenSource = ts
 	}
 }
 
-// WithTimeout sets the HTTP client timeout
+// WithTimeout sets the HTTP client timeout.
 func WithTimeout(timeout time.Duration) ClientOption {
-	return func(c *Client) {
-		c.httpClient.Timeout = timeout
+	return func(c *clientConfig) {
+		c.timeout = timeout
 	}
 }
 
-// New creates a new API client
-func New(opts ...ClientOption) *Client {
-	c := &Client{
-		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
-			Transport: &http.Transport{
-				MaxIdleConns:        100,
-				MaxIdleConnsPerHost: 10,
-				IdleConnTimeout:     90 * time.Second,
-			},
-		},
-		baseURL: "https://api.upsun.com",
+// WithRetryConfig sets custom retry configuration.
+func WithRetryConfig(cfg RetryConfig) ClientOption {
+	return func(c *clientConfig) {
+		c.retryConfig = &cfg
+	}
+}
+
+// WithLogFunc sets a logging function for debug output.
+func WithLogFunc(f func(format string, args ...any)) ClientOption {
+	return func(c *clientConfig) {
+		c.logFunc = f
+	}
+}
+
+// New creates a new API client with the given options.
+// If no TokenSource is provided, it uses auth.TokenSource to get credentials.
+func New(ctx context.Context, opts ...ClientOption) (*Client, error) {
+	cfg := &clientConfig{
+		baseURL: DefaultBaseURL,
+		timeout: DefaultTimeout,
 	}
 
 	for _, opt := range opts {
-		opt(c)
+		opt(cfg)
 	}
 
-	return c
+	// Parse base URL
+	baseURL, err := url.Parse(cfg.baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse base URL: %w", err)
+	}
+	if baseURL.Host == "" {
+		return nil, fmt.Errorf("invalid base URL (missing host): %s", cfg.baseURL)
+	}
+
+	// Get token source if not provided
+	tokenSource := cfg.tokenSource
+	if tokenSource == nil {
+		tokenSource, err = auth.TokenSource(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("get token source: %w", err)
+		}
+	}
+
+	// Build retry config
+	retryConfig := DefaultRetryConfig
+	if cfg.retryConfig != nil {
+		retryConfig = *cfg.retryConfig
+	}
+
+	// Build transport with retry and auth
+	transport := &Transport{
+		Base: &http.Transport{
+			MaxIdleConns:        100,
+			MaxIdleConnsPerHost: 10,
+			IdleConnTimeout:     90 * time.Second,
+		},
+		TokenSource: tokenSource,
+		RetryConfig: retryConfig,
+		LogFunc:     cfg.logFunc,
+	}
+
+	return &Client{
+		httpClient: &http.Client{
+			Timeout:   cfg.timeout,
+			Transport: transport,
+		},
+		baseURL: baseURL,
+	}, nil
 }
 
-// Do executes an HTTP request with authentication
-func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
-	req = req.WithContext(ctx)
+// Get performs a GET request to the given path.
+func (c *Client) Get(ctx context.Context, urlPath string, result any) error {
+	return c.do(ctx, http.MethodGet, urlPath, nil, result)
+}
 
-	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
+// Post performs a POST request to the given path.
+func (c *Client) Post(ctx context.Context, urlPath string, body, result any) error {
+	return c.do(ctx, http.MethodPost, urlPath, body, result)
+}
+
+// Patch performs a PATCH request to the given path.
+func (c *Client) Patch(ctx context.Context, urlPath string, body, result any) error {
+	return c.do(ctx, http.MethodPatch, urlPath, body, result)
+}
+
+// Delete performs a DELETE request to the given path.
+func (c *Client) Delete(ctx context.Context, urlPath string) error {
+	return c.do(ctx, http.MethodDelete, urlPath, nil, nil)
+}
+
+// do executes an HTTP request.
+func (c *Client) do(ctx context.Context, method, urlPath string, body, result any) error {
+	// Build URL
+	reqURL := c.resolveURL(urlPath)
+
+	// Build request body
+	var bodyReader io.Reader
+	if body != nil {
+		bodyBytes, err := json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("marshal request body: %w", err)
+		}
+		bodyReader = bytes.NewReader(bodyBytes)
 	}
+
+	// Create request
+	req, err := http.NewRequestWithContext(ctx, method, reqURL.String(), bodyReader)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	// TODO: implement retry logic
-	// TODO: implement token refresh on 401
+	// Execute request
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("execute request: %w", err)
+	}
+	defer resp.Body.Close()
 
-	return c.httpClient.Do(req)
+	// Read response body
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read response: %w", err)
+	}
+
+	// Check for errors
+	if resp.StatusCode >= 400 {
+		return parseAPIError(resp.StatusCode, respBody)
+	}
+
+	// Parse response
+	if result != nil && len(respBody) > 0 {
+		if err := json.Unmarshal(respBody, result); err != nil {
+			return fmt.Errorf("parse response: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// resolveURL resolves a path against the base URL.
+func (c *Client) resolveURL(urlPath string) *url.URL {
+	ref := &url.URL{Path: path.Join(c.baseURL.Path, urlPath)}
+	return c.baseURL.ResolveReference(ref)
+}
+
+
+// parseAPIError creates an error from an API error response.
+func parseAPIError(statusCode int, body []byte) error {
+	// Try to parse as JSON error
+	var apiErr struct {
+		Error   string `json:"error"`
+		Message string `json:"message"`
+		Detail  string `json:"detail"`
+	}
+	if err := json.Unmarshal(body, &apiErr); err == nil {
+		msg := apiErr.Error
+		if msg == "" {
+			msg = apiErr.Message
+		}
+		if msg == "" {
+			msg = apiErr.Detail
+		}
+		if msg != "" {
+			return &APIError{
+				StatusCode: statusCode,
+				Message:    msg,
+				Body:       body,
+			}
+		}
+	}
+
+	// Fall back to status text
+	return &APIError{
+		StatusCode: statusCode,
+		Message:    http.StatusText(statusCode),
+		Body:       body,
+	}
+}
+
+// APIError represents an error response from the API.
+type APIError struct {
+	StatusCode int
+	Message    string
+	Body       []byte
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("API error %d: %s", e.StatusCode, e.Message)
 }

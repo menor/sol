@@ -216,6 +216,143 @@ internal/
 
 Keep related concerns together until the package becomes unwieldy.
 
+### Security Patterns (IMPORTANT)
+
+**Validate user input that goes into shell commands:**
+```go
+// Prevent SSH argument injection via --app flag
+var validAppName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]*$`)
+
+if appName != "" && !validAppName.MatchString(appName) {
+    return errors.NewValidationError("invalid app name")
+}
+```
+
+**Escape user input in URL paths:**
+```go
+// Prevent path traversal via crafted IDs
+path := fmt.Sprintf("/v1/projects/%s", url.PathEscape(projectID))
+```
+
+### Testing Patterns
+
+**Factory variables for dependency injection:**
+```go
+// In production code - allows test override
+var newAPIClient = func(ctx context.Context) (api.API, error) {
+    return api.New(ctx)
+}
+
+var getEnv = os.Getenv  // Wraps os.Getenv for testability
+
+// In tests
+func TestMyCommand(t *testing.T) {
+    originalFactory := newAPIClient
+    defer func() { newAPIClient = originalFactory }()
+
+    newAPIClient = func(ctx context.Context) (api.API, error) {
+        return &api.MockClient{...}, nil
+    }
+    // ... test code
+}
+```
+
+**MockClient pattern with call tracking:**
+```go
+type MockClient struct {
+    ListProjectsFunc func(ctx context.Context) ([]ProjectRef, error)
+    Calls           []MockCall  // Track calls for assertions
+}
+
+func (m *MockClient) ListProjects(ctx context.Context) ([]ProjectRef, error) {
+    m.Calls = append(m.Calls, MockCall{Method: "ListProjects"})
+    if m.ListProjectsFunc != nil {
+        return m.ListProjectsFunc(ctx)
+    }
+    return nil, nil
+}
+```
+
+### API Patterns
+
+**Use `api.API` interface for testability:**
+```go
+// Commands depend on interface, not concrete *Client
+var newAPIClient = func(ctx context.Context) (api.API, error) {
+    return api.New(ctx)
+}
+
+// api.API composes ProjectAPI and EnvironmentAPI
+type API interface {
+    ProjectAPI      // ListProjects, GetProject
+    EnvironmentAPI  // ListEnvironments, GetEnvironment
+}
+```
+
+**HAL links can be object or array** - handle both:
+```go
+func (l HALLinks) GetHREF(name string) (string, bool) {
+    // Try as single object {"href": "..."}
+    var link HALLink
+    if err := json.Unmarshal(raw, &link); err == nil && link.HREF != "" {
+        return link.HREF, true
+    }
+    // Try as array [{"href": "..."}]
+    var links []HALLink
+    if err := json.Unmarshal(raw, &links); err == nil && len(links) > 0 {
+        return links[0].HREF, true
+    }
+    return "", false
+}
+```
+
+**Respect Retry-After header for rate limits:**
+```go
+if resp.StatusCode == http.StatusTooManyRequests {
+    if retryAfter := parseRetryAfter(resp.Header.Get("Retry-After")); retryAfter > 0 {
+        time.Sleep(retryAfter)
+    }
+}
+```
+
+### Go Idioms
+
+**Use local rand.Rand instead of global:**
+```go
+type Transport struct {
+    rng     *rand.Rand
+    rngOnce sync.Once
+}
+
+func (t *Transport) rand() *rand.Rand {
+    t.rngOnce.Do(func() {
+        t.rng = rand.New(rand.NewSource(time.Now().UnixNano()))
+    })
+    return t.rng
+}
+```
+
+**Use exec.CommandContext for cancellation:**
+```go
+// Good - respects context cancellation
+cmd := exec.CommandContext(ctx, sshPath, args...)
+
+// Bad - ignores context
+cmd := exec.Command(sshPath, args...)
+```
+
+**Never ignore errors from io operations:**
+```go
+// Good
+bodyBytes, err := io.ReadAll(req.Body)
+if err != nil {
+    return nil, fmt.Errorf("read body: %w", err)
+}
+
+// Bad - silently ignores errors
+bodyBytes, _ := io.ReadAll(req.Body)
+```
+
 ## Development
 
 ### Building

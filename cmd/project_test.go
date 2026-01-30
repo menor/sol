@@ -14,13 +14,12 @@ func TestRunProjectList_Success(t *testing.T) {
 	defer func() { newAPIClient = originalFactory }()
 
 	// Set up mock client
-	// Note: The real API (extended-access endpoint) only returns ID and OrganizationID.
-	// Other fields like Title, Region are empty. Use GetProject for full details.
+	// Note: ListProjects follows HAL links to /ref/projects for full details.
 	mockClient := &api.MockClient{
 		ListProjectsFunc: func(ctx context.Context) ([]api.ProjectRef, error) {
 			return []api.ProjectRef{
-				{ID: "proj1", OrganizationID: "org1"},
-				{ID: "proj2", OrganizationID: "org2"},
+				{ID: "proj1", Title: "Project One", Region: "us-1", OrganizationID: "org1"},
+				{ID: "proj2", Title: "Project Two", Region: "eu-2", OrganizationID: "org2"},
 			}, nil
 		},
 	}

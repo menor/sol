@@ -3,7 +3,10 @@ package api
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/url"
+	"slices"
+	"strings"
 	"time"
 )
 
@@ -41,9 +44,8 @@ type ProjectSubscription struct {
 	Suspended     bool   `json:"suspended,omitempty"`
 }
 
-// ProjectRef is a lightweight project reference returned in list operations.
-// Note: When returned from ListProjects (via extended-access endpoint), only
-// ID and OrganizationID are populated. Use GetProject for full details.
+// ProjectRef is a project reference returned in list operations.
+// ListProjects returns full project details via HAL links to /ref/projects.
 type ProjectRef struct {
 	ID             string    `json:"id"`
 	Region         string    `json:"region,omitempty"`
@@ -67,17 +69,15 @@ type ExtendedAccessItem struct {
 // ExtendedAccessResponse represents the response from /users/{id}/extended-access.
 type ExtendedAccessResponse struct {
 	Items []ExtendedAccessItem `json:"items"`
+	Links HALLinks             `json:"_links"`
 }
 
 // ListProjects returns all projects accessible to the authenticated user.
 //
-// This uses the extended-access endpoint which only returns project IDs and
-// organization IDs. Other ProjectRef fields (Title, Region, Status, etc.) will
-// be empty. Use GetProject to fetch full project details for a specific project.
-//
 // The API flow is:
 //  1. GET /users/me - to get current user ID
-//  2. GET /users/{id}/extended-access?filter[resource_type]=project - to get project access
+//  2. GET /users/{id}/extended-access?filter[resource_type]=project - to get project IDs
+//  3. GET /ref/projects?in=id1,id2,... - to bulk fetch project details (via HAL link)
 func (c *Client) ListProjects(ctx context.Context) ([]ProjectRef, error) {
 	// First get current user to get their ID
 	var user struct {
@@ -95,18 +95,80 @@ func (c *Client) ListProjects(ctx context.Context) ([]ProjectRef, error) {
 		return nil, fmt.Errorf("get project access: %w", err)
 	}
 
-	// Convert to ProjectRef - only ID and OrganizationID are available from extended-access
-	var projects []ProjectRef
+	// No projects? Return empty list
+	if len(accessResp.Items) == 0 {
+		return []ProjectRef{}, nil
+	}
+
+	// Build a map of org IDs from access items (we'll need this later)
+	orgByProject := make(map[string]string)
 	for _, item := range accessResp.Items {
 		if item.ResourceType == "project" {
-			projects = append(projects, ProjectRef{
-				ID:             item.ResourceID,
-				OrganizationID: item.OrganizationID,
-			})
+			orgByProject[item.ResourceID] = item.OrganizationID
 		}
 	}
 
+	// Collect all ref:projects:N links
+	projectLinks := collectHALLinks(accessResp.Links, "ref:projects")
+
+	if len(projectLinks) == 0 {
+		// Fallback: return sparse data if no HAL links
+		var projects []ProjectRef
+		for _, item := range accessResp.Items {
+			if item.ResourceType == "project" {
+				projects = append(projects, ProjectRef{
+					ID:             item.ResourceID,
+					OrganizationID: item.OrganizationID,
+				})
+			}
+		}
+		return projects, nil
+	}
+
+	// Fetch project refs from all links
+	allRefs := make(map[string]*ProjectRef)
+	for _, link := range projectLinks {
+		var batch map[string]*ProjectRef
+		if err := c.Get(ctx, link, &batch); err != nil {
+			return nil, fmt.Errorf("get project refs: %w", err)
+		}
+		// maps.Copy safely handles nil source maps (e.g., if API returns null)
+		maps.Copy(allRefs, batch)
+	}
+
+	// Convert map to slice, preserving org ID from access response
+	projects := make([]ProjectRef, 0, len(allRefs))
+	for id, ref := range allRefs {
+		if ref != nil {
+			// OrganizationID might not be in the ref response, use from access
+			if ref.OrganizationID == "" {
+				ref.OrganizationID = orgByProject[id]
+			}
+			projects = append(projects, *ref)
+		}
+	}
+
+	// Sort by ID for deterministic order (map iteration is random)
+	slices.SortFunc(projects, func(a, b ProjectRef) int {
+		return strings.Compare(a.ID, b.ID)
+	})
+
 	return projects, nil
+}
+
+// collectHALLinks collects all HAL links matching a prefix pattern (e.g., "ref:projects").
+// Links are expected to be numbered like ref:projects:0, ref:projects:1, etc.
+func collectHALLinks(links HALLinks, prefix string) []string {
+	var result []string
+	for i := 0; ; i++ {
+		linkName := fmt.Sprintf("%s:%d", prefix, i)
+		link, ok := links.GetHREF(linkName)
+		if !ok {
+			break
+		}
+		result = append(result, link)
+	}
+	return result
 }
 
 // GetProject returns a single project by ID.

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -14,6 +15,12 @@ import (
 func init() {
 	rootCmd.AddCommand(projectListCmd)
 	rootCmd.AddCommand(projectInfoCmd)
+}
+
+// newAPIClient is a factory for creating API clients.
+// Tests can replace this with a function that returns a mock.
+var newAPIClient = func(ctx context.Context) (api.API, error) {
+	return api.New(ctx)
 }
 
 var projectListCmd = &cobra.Command{
@@ -33,7 +40,7 @@ func runProjectList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := api.New(ctx)
+	client, err := newAPIClient(ctx)
 	if err != nil {
 		return errors.NewAuthError("failed to create API client").WithDetail("cause", err.Error())
 	}
@@ -80,7 +87,7 @@ func runProjectInfo(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	client, err := api.New(ctx)
+	client, err := newAPIClient(ctx)
 	if err != nil {
 		return errors.NewAuthError("failed to create API client").WithDetail("cause", err.Error())
 	}

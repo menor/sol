@@ -77,7 +77,7 @@ func runSSH(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create API client
-	client, err := api.New(ctx)
+	client, err := newAPIClient(ctx)
 	if err != nil {
 		return errors.NewAuthError("failed to create API client").WithDetail("cause", err.Error())
 	}

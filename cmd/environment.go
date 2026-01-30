@@ -41,7 +41,7 @@ func runEnvironmentList(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	client, err := api.New(ctx)
+	client, err := newAPIClient(ctx)
 	if err != nil {
 		return errors.NewAuthError("failed to create API client").WithDetail("cause", err.Error())
 	}
@@ -100,7 +100,7 @@ func runEnvironmentInfo(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	client, err := api.New(ctx)
+	client, err := newAPIClient(ctx)
 	if err != nil {
 		return errors.NewAuthError("failed to create API client").WithDetail("cause", err.Error())
 	}

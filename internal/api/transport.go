@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -116,6 +117,25 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			continue
 		}
 
+		// 429 Too Many Requests - retry with Retry-After if provided
+		if resp.StatusCode == http.StatusTooManyRequests {
+			retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
+			if retryAfter > 0 {
+				t.log("Rate limited, retry after %v", retryAfter)
+				drainBody(resp.Body)
+				select {
+				case <-req.Context().Done():
+					return nil, req.Context().Err()
+				case <-time.After(retryAfter):
+				}
+				continue
+			}
+			// No Retry-After header, use exponential backoff
+			t.log("Rate limited (no Retry-After), will retry with backoff")
+			drainBody(resp.Body)
+			continue
+		}
+
 		// 5xx - retry with backoff
 		if resp.StatusCode >= 500 {
 			t.log("Received %d, will retry", resp.StatusCode)
@@ -123,7 +143,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			continue
 		}
 
-		// 4xx (non-401) - don't retry
+		// 4xx (non-401, non-429) - don't retry
 		break
 	}
 
@@ -218,4 +238,30 @@ func drainBody(body io.ReadCloser) {
 		io.Copy(io.Discard, body)
 		body.Close()
 	}
+}
+
+// parseRetryAfter parses the Retry-After header value.
+// The header can be either:
+// - A number of seconds (e.g., "120")
+// - An HTTP date (e.g., "Wed, 21 Oct 2015 07:28:00 GMT")
+// Returns 0 if the header is empty or unparseable.
+func parseRetryAfter(value string) time.Duration {
+	if value == "" {
+		return 0
+	}
+
+	// Try parsing as seconds first (most common)
+	if seconds, err := strconv.Atoi(value); err == nil && seconds > 0 {
+		return time.Duration(seconds) * time.Second
+	}
+
+	// Try parsing as HTTP date
+	if t, err := http.ParseTime(value); err == nil {
+		delta := time.Until(t)
+		if delta > 0 {
+			return delta
+		}
+	}
+
+	return 0
 }

@@ -275,6 +275,20 @@ func (m *MockClient) ListProjects(ctx context.Context) ([]ProjectRef, error) {
 
 ### API Patterns
 
+**Use `api.API` interface for testability:**
+```go
+// Commands depend on interface, not concrete *Client
+var newAPIClient = func(ctx context.Context) (api.API, error) {
+    return api.New(ctx)
+}
+
+// api.API composes ProjectAPI and EnvironmentAPI
+type API interface {
+    ProjectAPI      // ListProjects, GetProject
+    EnvironmentAPI  // ListEnvironments, GetEnvironment
+}
+```
+
 **HAL links can be object or array** - handle both:
 ```go
 func (l HALLinks) GetHREF(name string) (string, bool) {

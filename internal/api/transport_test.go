@@ -274,3 +274,51 @@ func TestIsRetryableStatus(t *testing.T) {
 		}
 	}
 }
+
+func TestParseRetryAfter_Seconds(t *testing.T) {
+	tests := []struct {
+		value string
+		want  time.Duration
+	}{
+		{"60", 60 * time.Second},
+		{"120", 120 * time.Second},
+		{"1", 1 * time.Second},
+		{"0", 0},
+		{"-1", 0},
+		{"", 0},
+		{"invalid", 0},
+	}
+
+	for _, tt := range tests {
+		got := parseRetryAfter(tt.value)
+		if got != tt.want {
+			t.Errorf("parseRetryAfter(%q) = %v, want %v", tt.value, got, tt.want)
+		}
+	}
+}
+
+func TestParseRetryAfter_HTTPDate(t *testing.T) {
+	// Create a time 30 seconds in the future
+	futureTime := time.Now().Add(30 * time.Second)
+	httpDate := futureTime.UTC().Format(http.TimeFormat)
+
+	got := parseRetryAfter(httpDate)
+
+	// Should be approximately 30 seconds (allow 2 second tolerance for test execution time)
+	if got < 28*time.Second || got > 32*time.Second {
+		t.Errorf("parseRetryAfter(%q) = %v, expected ~30s", httpDate, got)
+	}
+}
+
+func TestParseRetryAfter_PastHTTPDate(t *testing.T) {
+	// Create a time in the past
+	pastTime := time.Now().Add(-30 * time.Second)
+	httpDate := pastTime.UTC().Format(http.TimeFormat)
+
+	got := parseRetryAfter(httpDate)
+
+	// Past dates should return 0
+	if got != 0 {
+		t.Errorf("parseRetryAfter(%q) = %v, expected 0 for past date", httpDate, got)
+	}
+}

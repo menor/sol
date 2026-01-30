@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -12,6 +13,10 @@ import (
 	"lab.plat.farm/menor/sol/internal/cli"
 	"lab.plat.farm/menor/sol/internal/errors"
 )
+
+// validAppName matches valid Upsun app names: alphanumeric, underscore, hyphen.
+// Must start with alphanumeric character.
+var validAppName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]*$`)
 
 func init() {
 	rootCmd.AddCommand(sshCmd)
@@ -62,6 +67,13 @@ func runSSH(cmd *cobra.Command, args []string) error {
 	}
 
 	appName, _ := cmd.Flags().GetString("app")
+
+	// Validate app name to prevent SSH argument injection
+	if appName != "" && !validAppName.MatchString(appName) {
+		return errors.NewValidationError("invalid app name").
+			WithDetail("app", appName).
+			WithHint("App names must start with a letter or digit and contain only letters, digits, underscores, or hyphens")
+	}
 
 	// Create API client
 	client, err := api.New(ctx)

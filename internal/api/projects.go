@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"time"
 )
 
@@ -62,7 +63,7 @@ func (c *Client) ListProjects(ctx context.Context) ([]ProjectRef, error) {
 // GetProject returns a single project by ID.
 func (c *Client) GetProject(ctx context.Context, projectID string) (*Project, error) {
 	var project Project
-	path := fmt.Sprintf("/v1/projects/%s", projectID)
+	path := fmt.Sprintf("/v1/projects/%s", url.PathEscape(projectID))
 	if err := c.Get(ctx, path, &project); err != nil {
 		return nil, err
 	}

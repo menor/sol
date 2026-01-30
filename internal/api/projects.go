@@ -42,20 +42,42 @@ type ProjectSubscription struct {
 }
 
 // ProjectRef is a lightweight project reference returned in list operations.
+// Note: When returned from ListProjects (via extended-access endpoint), only
+// ID and OrganizationID are populated. Use GetProject for full details.
 type ProjectRef struct {
 	ID             string    `json:"id"`
-	Region         string    `json:"region"`
-	Title          string    `json:"title"`
-	Status         string    `json:"status"`
-	OrganizationID string    `json:"organization_id"`
-	SubscriptionID string    `json:"subscription_id"`
-	Vendor         string    `json:"vendor"`
+	Region         string    `json:"region,omitempty"`
+	Title          string    `json:"title,omitempty"`
+	Status         string    `json:"status,omitempty"`
+	OrganizationID string    `json:"organization_id,omitempty"`
+	SubscriptionID string    `json:"subscription_id,omitempty"`
+	Vendor         string    `json:"vendor,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
 
+// ExtendedAccessItem represents a single access entry from the extended-access API.
+// This is what the /users/{id}/extended-access endpoint actually returns.
+type ExtendedAccessItem struct {
+	ResourceID     string `json:"resource_id"`
+	ResourceType   string `json:"resource_type"`
+	OrganizationID string `json:"organization_id"`
+}
+
+// ExtendedAccessResponse represents the response from /users/{id}/extended-access.
+type ExtendedAccessResponse struct {
+	Items []ExtendedAccessItem `json:"items"`
+}
+
 // ListProjects returns all projects accessible to the authenticated user.
-// This requires first getting the user ID, then fetching their project access.
+//
+// This uses the extended-access endpoint which only returns project IDs and
+// organization IDs. Other ProjectRef fields (Title, Region, Status, etc.) will
+// be empty. Use GetProject to fetch full project details for a specific project.
+//
+// The API flow is:
+//  1. GET /users/me - to get current user ID
+//  2. GET /users/{id}/extended-access?filter[resource_type]=project - to get project access
 func (c *Client) ListProjects(ctx context.Context) ([]ProjectRef, error) {
 	// First get current user to get their ID
 	var user struct {
@@ -68,20 +90,12 @@ func (c *Client) ListProjects(ctx context.Context) ([]ProjectRef, error) {
 	// Get user's project access
 	accessPath := fmt.Sprintf("/users/%s/extended-access?filter[resource_type]=project", url.PathEscape(user.ID))
 
-	// The extended-access endpoint returns a different structure
-	var accessResp struct {
-		Items []struct {
-			ResourceID     string `json:"resource_id"`
-			ResourceType   string `json:"resource_type"`
-			OrganizationID string `json:"organization_id"`
-		} `json:"items"`
-	}
+	var accessResp ExtendedAccessResponse
 	if err := c.Get(ctx, accessPath, &accessResp); err != nil {
 		return nil, fmt.Errorf("get project access: %w", err)
 	}
 
-	// Convert to ProjectRef - we only have IDs from extended-access
-	// The full project details would require additional API calls to /ref/projects
+	// Convert to ProjectRef - only ID and OrganizationID are available from extended-access
 	var projects []ProjectRef
 	for _, item := range accessResp.Items {
 		if item.ResourceType == "project" {

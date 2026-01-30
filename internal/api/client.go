@@ -28,6 +28,7 @@ const (
 type Client struct {
 	httpClient *http.Client
 	baseURL    *url.URL
+	logFunc    func(format string, args ...any)
 }
 
 // ClientOption configures the client.
@@ -131,6 +132,7 @@ func New(ctx context.Context, opts ...ClientOption) (*Client, error) {
 			Transport: transport,
 		},
 		baseURL: baseURL,
+		logFunc: cfg.logFunc,
 	}, nil
 }
 
@@ -212,6 +214,10 @@ func (c *Client) resolveURL(urlPath string) *url.URL {
 	// Parse the urlPath to properly handle query strings
 	ref, err := url.Parse(urlPath)
 	if err != nil {
+		// Log warning about URL parse failure
+		if c.logFunc != nil {
+			c.logFunc("warning: failed to parse URL path %q: %v, using fallback", urlPath, err)
+		}
 		// Fallback to old behavior if parsing fails
 		ref = &url.URL{Path: path.Join(c.baseURL.Path, urlPath)}
 	} else {

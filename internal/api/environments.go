@@ -39,14 +39,18 @@ type AccessAddress struct {
 
 // ListEnvironments returns all environments for a project.
 func (c *Client) ListEnvironments(ctx context.Context, projectID string) ([]Environment, error) {
-	path := fmt.Sprintf("/v1/projects/%s/environments", url.PathEscape(projectID))
-	return Collect[Environment](ctx, c, path)
+	var environments []Environment
+	path := fmt.Sprintf("/projects/%s/environments", url.PathEscape(projectID))
+	if err := c.Get(ctx, path, &environments); err != nil {
+		return nil, err
+	}
+	return environments, nil
 }
 
 // GetEnvironment returns a single environment by ID.
 func (c *Client) GetEnvironment(ctx context.Context, projectID, environmentID string) (*Environment, error) {
 	var env Environment
-	path := fmt.Sprintf("/v1/projects/%s/environments/%s", url.PathEscape(projectID), url.PathEscape(environmentID))
+	path := fmt.Sprintf("/projects/%s/environments/%s", url.PathEscape(projectID), url.PathEscape(environmentID))
 	if err := c.Get(ctx, path, &env); err != nil {
 		return nil, err
 	}

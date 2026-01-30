@@ -55,15 +55,51 @@ type ProjectRef struct {
 }
 
 // ListProjects returns all projects accessible to the authenticated user.
+// This requires first getting the user ID, then fetching their project access.
 func (c *Client) ListProjects(ctx context.Context) ([]ProjectRef, error) {
-	// The /me/projects endpoint returns project references
-	return Collect[ProjectRef](ctx, c, "/v1/me/projects")
+	// First get current user to get their ID
+	var user struct {
+		ID string `json:"id"`
+	}
+	if err := c.Get(ctx, "/users/me", &user); err != nil {
+		return nil, fmt.Errorf("get current user: %w", err)
+	}
+
+	// Get user's project access
+	accessPath := fmt.Sprintf("/users/%s/extended-access?filter[resource_type]=project", url.PathEscape(user.ID))
+
+	// The extended-access endpoint returns a different structure
+	var accessResp struct {
+		Items []struct {
+			ResourceID     string `json:"resource_id"`
+			ResourceType   string `json:"resource_type"`
+			OrganizationID string `json:"organization_id"`
+		} `json:"items"`
+	}
+	if err := c.Get(ctx, accessPath, &accessResp); err != nil {
+		return nil, fmt.Errorf("get project access: %w", err)
+	}
+
+	// Convert to ProjectRef - we only have IDs from extended-access
+	// The full project details would require additional API calls to /ref/projects
+	var projects []ProjectRef
+	for _, item := range accessResp.Items {
+		if item.ResourceType == "project" {
+			projects = append(projects, ProjectRef{
+				ID:             item.ResourceID,
+				OrganizationID: item.OrganizationID,
+			})
+		}
+	}
+
+	return projects, nil
 }
 
 // GetProject returns a single project by ID.
 func (c *Client) GetProject(ctx context.Context, projectID string) (*Project, error) {
 	var project Project
-	path := fmt.Sprintf("/v1/projects/%s", url.PathEscape(projectID))
+	// Use /projects endpoint without /v1 prefix
+	path := fmt.Sprintf("/projects/%s", url.PathEscape(projectID))
 	if err := c.Get(ctx, path, &project); err != nil {
 		return nil, err
 	}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"maps"
 	"net/url"
+	"slices"
+	"strings"
 	"time"
 )
 
@@ -130,6 +132,7 @@ func (c *Client) ListProjects(ctx context.Context) ([]ProjectRef, error) {
 		if err := c.Get(ctx, link, &batch); err != nil {
 			return nil, fmt.Errorf("get project refs: %w", err)
 		}
+		// maps.Copy safely handles nil source maps (e.g., if API returns null)
 		maps.Copy(allRefs, batch)
 	}
 
@@ -144,6 +147,11 @@ func (c *Client) ListProjects(ctx context.Context) ([]ProjectRef, error) {
 			projects = append(projects, *ref)
 		}
 	}
+
+	// Sort by ID for deterministic order (map iteration is random)
+	slices.SortFunc(projects, func(a, b ProjectRef) int {
+		return strings.Compare(a.ID, b.ID)
+	})
 
 	return projects, nil
 }

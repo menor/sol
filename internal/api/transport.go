@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"sync"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -44,6 +45,11 @@ type Transport struct {
 
 	// LogFunc is called for retry/refresh events (optional)
 	LogFunc func(format string, args ...any)
+
+	// rng is a local random source for jitter calculation.
+	// Using a local source instead of global rand avoids shared state.
+	rng     *rand.Rand
+	rngOnce sync.Once
 }
 
 // RoundTrip implements http.RoundTripper.
@@ -55,7 +61,10 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	// Clone request and set auth header
-	req = cloneRequest(req)
+	req, err = cloneRequest(req)
+	if err != nil {
+		return nil, fmt.Errorf("clone request: %w", err)
+	}
 	req.Header.Set("Authorization", token.Type()+" "+token.AccessToken)
 
 	// Attempt with retries
@@ -73,7 +82,10 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			case <-time.After(delay):
 			}
 			// Re-clone for retry (body needs to be re-readable)
-			req = cloneRequest(req)
+			req, err = cloneRequest(req)
+			if err != nil {
+				return nil, fmt.Errorf("clone request for retry: %w", err)
+			}
 			req.Header.Set("Authorization", token.Type()+" "+token.AccessToken)
 		}
 
@@ -154,11 +166,19 @@ func (t *Transport) calculateDelay(attempt int, cfg RetryConfig) time.Duration {
 		delay = float64(cfg.MaxDelay)
 	}
 
-	// Add jitter
-	jitter := delay * cfg.JitterRatio * (rand.Float64()*2 - 1) // -jitter to +jitter
+	// Add jitter using local random source
+	jitter := delay * cfg.JitterRatio * (t.rand().Float64()*2 - 1) // -jitter to +jitter
 	delay += jitter
 
 	return time.Duration(delay)
+}
+
+// rand returns the local random source, initializing it lazily.
+func (t *Transport) rand() *rand.Rand {
+	t.rngOnce.Do(func() {
+		t.rng = rand.New(rand.NewSource(time.Now().UnixNano()))
+	})
+	return t.rng
 }
 
 func (t *Transport) log(format string, args ...any) {
@@ -175,17 +195,21 @@ func isRetryableStatus(code int) bool {
 }
 
 // cloneRequest creates a shallow copy of a request with a re-readable body.
-func cloneRequest(req *http.Request) *http.Request {
+// Returns an error if the body cannot be read.
+func cloneRequest(req *http.Request) (*http.Request, error) {
 	clone := req.Clone(req.Context())
 
 	if req.Body != nil && req.Body != http.NoBody {
-		bodyBytes, _ := io.ReadAll(req.Body)
+		bodyBytes, err := io.ReadAll(req.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read request body: %w", err)
+		}
 		req.Body.Close()
 		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 		clone.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	}
 
-	return clone
+	return clone, nil
 }
 
 // drainBody reads and closes a response body to allow connection reuse.

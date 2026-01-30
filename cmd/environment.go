@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -125,8 +124,6 @@ func runEnvironmentInfo(cmd *cobra.Command, args []string) error {
 // 1. PLATFORM_BRANCH environment variable
 // 2. Current git branch (TODO)
 func detectEnvironmentID() string {
-	if branch := os.Getenv("PLATFORM_BRANCH"); branch != "" {
-		return branch
-	}
-	return ""
+	// Use getEnv wrapper (defined in project.go) for testability
+	return getEnv("PLATFORM_BRANCH")
 }

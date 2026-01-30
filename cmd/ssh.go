@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -115,7 +116,7 @@ func runSSH(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Connecting to %s...\n", envID)
 	}
 
-	return execSSH(sshArgs)
+	return execSSH(ctx, sshArgs)
 }
 
 // parseSSHURL parses an SSH URL into arguments for the ssh command.
@@ -144,30 +145,28 @@ func modifySSHURLForApp(sshURL, appName string) string {
 	// Remove ssh:// prefix for manipulation
 	sshURL = strings.TrimPrefix(sshURL, "ssh://")
 
-	// Find the @ separator
-	atIdx := strings.Index(sshURL, "@")
-	if atIdx == -1 {
+	// Split on @ separator
+	user, host, found := strings.Cut(sshURL, "@")
+	if !found {
 		return "ssh://" + sshURL
 	}
-
-	user := sshURL[:atIdx]
-	host := sshURL[atIdx+1:]
 
 	// Add app suffix to user
 	return fmt.Sprintf("ssh://%s--%s@%s", user, appName, host)
 }
 
 // execSSH executes the ssh command with the given arguments.
-// It replaces the current process with ssh.
-func execSSH(args []string) error {
+// The process runs as a child and inherits stdin/stdout/stderr.
+// The context can be used to cancel the SSH session.
+func execSSH(ctx context.Context, args []string) error {
 	sshPath, err := exec.LookPath("ssh")
 	if err != nil {
 		return errors.NewInternalError("ssh command not found").
 			WithHint("Ensure OpenSSH is installed and in your PATH")
 	}
 
-	// Execute ssh, replacing current process
-	cmd := exec.Command(sshPath, args...)
+	// Execute ssh as a child process with context for cancellation
+	cmd := exec.CommandContext(ctx, sshPath, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

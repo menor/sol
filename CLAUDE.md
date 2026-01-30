@@ -4,6 +4,37 @@
 
 Sol is an agent-first CLI for Upsun. It prioritizes structured output (JSON) for AI agents while remaining usable by humans.
 
+## Design Philosophy
+
+### Agent-First, Composable Commands
+
+Sol follows Unix philosophy: each command does one thing well. Agents compose multiple commands as needed.
+
+**Do:**
+- Keep commands focused and fast
+- Return the minimal data needed for the command's purpose
+- Let agents orchestrate multiple calls based on user intent
+
+**Don't:**
+- Fetch extra data "just in case" it might be useful
+- Combine multiple concerns into one command
+- Add flags to include tangentially related data
+
+**Example:** User asks "list projects in Observability org"
+
+Bad approach (monolithic):
+```
+sol project:list --with-org-details  # Fetches org data for every project
+```
+
+Good approach (composable):
+```
+sol organization:list    # Agent finds org ID for "Observability"
+sol project:list         # Agent filters by organization_id
+```
+
+The composable approach is faster (fewer API calls when org details aren't needed) and more flexible (agent decides what data to fetch based on actual user intent).
+
 ## Upsun Documentation
 
 When you need Upsun documentation, search these sites:
@@ -30,6 +61,28 @@ When you need Upsun documentation, search these sites:
 - Base URL: `https://api.upsun.com`
 - Format: HAL+JSON with `_links` for pagination
 - Auth: Bearer token in Authorization header
+
+### Upsun CLI Commands Reference
+
+Sol aims to implement key commands from the Upsun CLI. Use this as reference for command naming and functionality:
+
+**Activity:** `activity:list`, `activity:get`, `activity:log`, `activity:cancel`
+**App:** `app:list`, `app:config-get`, `app:config-validate`
+**Auth:** `auth:browser-login`, `auth:api-token-login`, `auth:info`, `auth:logout`
+**Backup:** `backup:list`, `backup:create`, `backup:restore`, `backup:delete`, `backup:get`
+**Environment:** `environment:list`, `environment:info`, `environment:activate`, `environment:branch`, `environment:delete`, `environment:deploy`, `environment:merge`, `environment:push`, `environment:ssh`, `environment:url`, `environment:logs`, `environment:relationships`
+**Integration:** `integration:list`, `integration:add`, `integration:get`, `integration:update`, `integration:delete`
+**Organization:** `organization:list`, `organization:info`, `organization:create`, `organization:user:list`, `organization:user:add`
+**Project:** `project:list`, `project:info`, `project:create`, `project:delete`, `project:get`
+**Resources:** `resources:get`, `resources:set`, `resources:size:list`
+**Route:** `route:list`, `route:get`
+**Service:** `service:list`
+**SSH:** `ssh` (alias for `environment:ssh`)
+**Tunnel:** `tunnel:open`, `tunnel:list`, `tunnel:close`, `tunnel:info`
+**User:** `user:list`, `user:add`, `user:get`, `user:update`, `user:delete`
+**Variable:** `variable:list`, `variable:get`, `variable:create`, `variable:update`, `variable:delete`
+
+Design principle: Each command does one thing. Agents compose multiple commands as needed (e.g., `organization:list` + `project:list` to get projects with org names).
 
 ## Code Patterns
 

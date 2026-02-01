@@ -19,8 +19,15 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Configuration
-PROJECT="${SMOKE_TEST_PROJECT:-2qha7xirkneui}"
+# Configuration - require project ID
+if [ -z "$SMOKE_TEST_PROJECT" ]; then
+    echo "Error: SMOKE_TEST_PROJECT environment variable is required."
+    echo ""
+    echo "Usage:"
+    echo "  SMOKE_TEST_PROJECT=your-project-id ./scripts/smoke-test.sh"
+    exit 1
+fi
+PROJECT="$SMOKE_TEST_PROJECT"
 SOL="./sol"
 TEST_VAR_NAME="SOL_SMOKE_TEST_VAR"
 PASSED=0

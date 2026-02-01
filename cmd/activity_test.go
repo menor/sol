@@ -17,6 +17,11 @@ func TestRunActivityList_Success(t *testing.T) {
 		getEnv = originalGetEnv
 	}()
 
+	// Reset global flag state (Cobra flags persist between tests)
+	activityLimit = 10
+	activityType = ""
+	activityState = ""
+
 	// Mock environment
 	getEnv = func(key string) string {
 		if key == "PLATFORM_PROJECT" {
@@ -78,6 +83,11 @@ func TestRunActivityLog_Success(t *testing.T) {
 		getEnv = originalGetEnv
 	}()
 
+	// Reset global flag state
+	activityLimit = 10
+	activityType = ""
+	activityState = ""
+
 	// Mock environment
 	getEnv = func(key string) string {
 		if key == "PLATFORM_PROJECT" {
@@ -124,6 +134,11 @@ func TestRunActivityLog_NotFound(t *testing.T) {
 		getEnv = originalGetEnv
 	}()
 
+	// Reset global flag state
+	activityLimit = 10
+	activityType = ""
+	activityState = ""
+
 	// Mock environment
 	getEnv = func(key string) string {
 		if key == "PLATFORM_PROJECT" {
@@ -157,6 +172,11 @@ func TestRunActivityList_NoProjectSpecified(t *testing.T) {
 	// Save and restore the original getEnv
 	originalGetEnv := getEnv
 	defer func() { getEnv = originalGetEnv }()
+
+	// Reset global flag state
+	activityLimit = 10
+	activityType = ""
+	activityState = ""
 
 	// Mock environment to return nothing
 	getEnv = func(key string) string {

@@ -20,6 +20,9 @@ func init() {
 // newAPIClient is a factory for creating API clients.
 // Tests can replace this with a function that returns a mock.
 var newAPIClient = func(ctx context.Context) (api.API, error) {
+	if debug {
+		return api.New(ctx, api.WithLogFunc(debugLog))
+	}
 	return api.New(ctx)
 }
 

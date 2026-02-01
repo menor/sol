@@ -2,9 +2,20 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 )
+
+// debug is set by the --debug flag and enables verbose API logging.
+var debug bool
+
+// debugLog prints debug messages to stderr when --debug is enabled.
+func debugLog(format string, args ...any) {
+	if debug {
+		fmt.Fprintf(os.Stderr, "[DEBUG] "+format+"\n", args...)
+	}
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "sol",
@@ -36,6 +47,7 @@ func init() {
 	rootCmd.PersistentFlags().StringP("environment", "e", "", "Environment name")
 	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "Suppress non-essential output")
 	rootCmd.PersistentFlags().Bool("no-cache", false, "Bypass cache for this request")
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Show API request/response details")
 
 	// Version command
 	rootCmd.AddCommand(&cobra.Command{

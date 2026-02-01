@@ -141,6 +141,35 @@ func (c *Client) Get(ctx context.Context, urlPath string, result any) error {
 	return c.do(ctx, http.MethodGet, urlPath, nil, result)
 }
 
+// GetText performs a GET request that returns plain text.
+func (c *Client) GetText(ctx context.Context, urlPath string) (string, error) {
+	reqURL := c.resolveURL(urlPath)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL.String(), nil)
+	if err != nil {
+		return "", fmt.Errorf("create request: %w", err)
+	}
+
+	req.Header.Set("Accept", "text/plain")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("read response: %w", err)
+	}
+
+	if resp.StatusCode >= 400 {
+		return "", parseAPIError(resp.StatusCode, body)
+	}
+
+	return string(body), nil
+}
+
 // Post performs a POST request to the given path.
 func (c *Client) Post(ctx context.Context, urlPath string, body, result any) error {
 	return c.do(ctx, http.MethodPost, urlPath, body, result)
@@ -156,6 +185,13 @@ func (c *Client) Delete(ctx context.Context, urlPath string) error {
 	return c.do(ctx, http.MethodDelete, urlPath, nil, nil)
 }
 
+// log calls logFunc if it's set, used for debug output.
+func (c *Client) log(format string, args ...any) {
+	if c.logFunc != nil {
+		c.logFunc(format, args...)
+	}
+}
+
 // do executes an HTTP request.
 func (c *Client) do(ctx context.Context, method, urlPath string, body, result any) error {
 	// Build URL
@@ -163,12 +199,19 @@ func (c *Client) do(ctx context.Context, method, urlPath string, body, result an
 
 	// Build request body
 	var bodyReader io.Reader
+	var bodyBytes []byte
 	if body != nil {
-		bodyBytes, err := json.Marshal(body)
+		var err error
+		bodyBytes, err = json.Marshal(body)
 		if err != nil {
 			return fmt.Errorf("marshal request body: %w", err)
 		}
 		bodyReader = bytes.NewReader(bodyBytes)
+	}
+
+	c.log("REQUEST: %s %s", method, reqURL.String())
+	if len(bodyBytes) > 0 {
+		c.log("REQUEST BODY: %s", string(bodyBytes))
 	}
 
 	// Create request
@@ -193,8 +236,11 @@ func (c *Client) do(ctx context.Context, method, urlPath string, body, result an
 		return fmt.Errorf("read response: %w", err)
 	}
 
+	c.log("RESPONSE: %d (%d bytes)", resp.StatusCode, len(respBody))
+
 	// Check for errors
 	if resp.StatusCode >= 400 {
+		c.log("RESPONSE BODY: %s", string(respBody))
 		return parseAPIError(resp.StatusCode, respBody)
 	}
 
@@ -243,6 +289,10 @@ func parseAPIError(statusCode int, body []byte) error {
 		}
 		if msg == "" {
 			msg = apiErr.Detail
+		}
+		// Include raw body for debugging if no message found
+		if msg == "" && len(body) > 0 {
+			msg = string(body)
 		}
 		if msg != "" {
 			return &APIError{

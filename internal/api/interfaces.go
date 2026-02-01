@@ -16,11 +16,35 @@ type EnvironmentAPI interface {
 	GetEnvironment(ctx context.Context, projectID, environmentID string) (*Environment, error)
 }
 
+// ActivityAPI defines the activity-related API operations.
+type ActivityAPI interface {
+	ListActivities(ctx context.Context, projectID string, opts *ListActivitiesOptions) ([]Activity, error)
+	GetActivity(ctx context.Context, projectID, activityID string) (*Activity, error)
+	GetActivityLog(ctx context.Context, projectID, activityID string) (string, error)
+}
+
+// VariableAPI defines the variable-related API operations.
+type VariableAPI interface {
+	// Project-level variables
+	ListProjectVariables(ctx context.Context, projectID string) ([]Variable, error)
+	GetProjectVariable(ctx context.Context, projectID, name string) (*Variable, error)
+	SetProjectVariable(ctx context.Context, projectID string, input *VariableInput) (*Variable, error)
+	DeleteProjectVariable(ctx context.Context, projectID, name string) error
+
+	// Environment-level variables
+	ListEnvironmentVariables(ctx context.Context, projectID, envID string) ([]Variable, error)
+	GetEnvironmentVariable(ctx context.Context, projectID, envID, name string) (*Variable, error)
+	SetEnvironmentVariable(ctx context.Context, projectID, envID string, input *VariableInput) (*Variable, error)
+	DeleteEnvironmentVariable(ctx context.Context, projectID, envID, name string) error
+}
+
 // API is the full interface for all API operations.
-// It composes ProjectAPI and EnvironmentAPI interfaces.
+// It composes ProjectAPI, EnvironmentAPI, ActivityAPI, and VariableAPI interfaces.
 type API interface {
 	ProjectAPI
 	EnvironmentAPI
+	ActivityAPI
+	VariableAPI
 }
 
 // Verify Client implements API at compile time.

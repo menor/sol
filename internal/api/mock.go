@@ -13,6 +13,23 @@ type MockClient struct {
 	ListEnvironmentsFunc func(ctx context.Context, projectID string) ([]Environment, error)
 	GetEnvironmentFunc   func(ctx context.Context, projectID, environmentID string) (*Environment, error)
 
+	// Activity methods
+	ListActivitiesFunc func(ctx context.Context, projectID string, opts *ListActivitiesOptions) ([]Activity, error)
+	GetActivityFunc    func(ctx context.Context, projectID, activityID string) (*Activity, error)
+	GetActivityLogFunc func(ctx context.Context, projectID, activityID string) (string, error)
+
+	// Variable methods - Project level
+	ListProjectVariablesFunc  func(ctx context.Context, projectID string) ([]Variable, error)
+	GetProjectVariableFunc    func(ctx context.Context, projectID, name string) (*Variable, error)
+	SetProjectVariableFunc    func(ctx context.Context, projectID string, input *VariableInput) (*Variable, error)
+	DeleteProjectVariableFunc func(ctx context.Context, projectID, name string) error
+
+	// Variable methods - Environment level
+	ListEnvironmentVariablesFunc  func(ctx context.Context, projectID, envID string) ([]Variable, error)
+	GetEnvironmentVariableFunc    func(ctx context.Context, projectID, envID, name string) (*Variable, error)
+	SetEnvironmentVariableFunc    func(ctx context.Context, projectID, envID string, input *VariableInput) (*Variable, error)
+	DeleteEnvironmentVariableFunc func(ctx context.Context, projectID, envID, name string) error
+
 	// Track calls for assertions
 	Calls []MockCall
 }
@@ -57,6 +74,105 @@ func (m *MockClient) GetEnvironment(ctx context.Context, projectID, environmentI
 		return m.GetEnvironmentFunc(ctx, projectID, environmentID)
 	}
 	return nil, nil
+}
+
+// ListActivities implements ActivityAPI.
+func (m *MockClient) ListActivities(ctx context.Context, projectID string, opts *ListActivitiesOptions) ([]Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListActivities", Args: []any{projectID, opts}})
+	if m.ListActivitiesFunc != nil {
+		return m.ListActivitiesFunc(ctx, projectID, opts)
+	}
+	return nil, nil
+}
+
+// GetActivity implements ActivityAPI.
+func (m *MockClient) GetActivity(ctx context.Context, projectID, activityID string) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetActivity", Args: []any{projectID, activityID}})
+	if m.GetActivityFunc != nil {
+		return m.GetActivityFunc(ctx, projectID, activityID)
+	}
+	return nil, nil
+}
+
+// GetActivityLog implements ActivityAPI.
+func (m *MockClient) GetActivityLog(ctx context.Context, projectID, activityID string) (string, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetActivityLog", Args: []any{projectID, activityID}})
+	if m.GetActivityLogFunc != nil {
+		return m.GetActivityLogFunc(ctx, projectID, activityID)
+	}
+	return "", nil
+}
+
+// ListProjectVariables implements VariableAPI.
+func (m *MockClient) ListProjectVariables(ctx context.Context, projectID string) ([]Variable, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListProjectVariables", Args: []any{projectID}})
+	if m.ListProjectVariablesFunc != nil {
+		return m.ListProjectVariablesFunc(ctx, projectID)
+	}
+	return nil, nil
+}
+
+// GetProjectVariable implements VariableAPI.
+func (m *MockClient) GetProjectVariable(ctx context.Context, projectID, name string) (*Variable, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetProjectVariable", Args: []any{projectID, name}})
+	if m.GetProjectVariableFunc != nil {
+		return m.GetProjectVariableFunc(ctx, projectID, name)
+	}
+	return nil, nil
+}
+
+// SetProjectVariable implements VariableAPI.
+func (m *MockClient) SetProjectVariable(ctx context.Context, projectID string, input *VariableInput) (*Variable, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "SetProjectVariable", Args: []any{projectID, input}})
+	if m.SetProjectVariableFunc != nil {
+		return m.SetProjectVariableFunc(ctx, projectID, input)
+	}
+	return nil, nil
+}
+
+// DeleteProjectVariable implements VariableAPI.
+func (m *MockClient) DeleteProjectVariable(ctx context.Context, projectID, name string) error {
+	m.Calls = append(m.Calls, MockCall{Method: "DeleteProjectVariable", Args: []any{projectID, name}})
+	if m.DeleteProjectVariableFunc != nil {
+		return m.DeleteProjectVariableFunc(ctx, projectID, name)
+	}
+	return nil
+}
+
+// ListEnvironmentVariables implements VariableAPI.
+func (m *MockClient) ListEnvironmentVariables(ctx context.Context, projectID, envID string) ([]Variable, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListEnvironmentVariables", Args: []any{projectID, envID}})
+	if m.ListEnvironmentVariablesFunc != nil {
+		return m.ListEnvironmentVariablesFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// GetEnvironmentVariable implements VariableAPI.
+func (m *MockClient) GetEnvironmentVariable(ctx context.Context, projectID, envID, name string) (*Variable, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetEnvironmentVariable", Args: []any{projectID, envID, name}})
+	if m.GetEnvironmentVariableFunc != nil {
+		return m.GetEnvironmentVariableFunc(ctx, projectID, envID, name)
+	}
+	return nil, nil
+}
+
+// SetEnvironmentVariable implements VariableAPI.
+func (m *MockClient) SetEnvironmentVariable(ctx context.Context, projectID, envID string, input *VariableInput) (*Variable, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "SetEnvironmentVariable", Args: []any{projectID, envID, input}})
+	if m.SetEnvironmentVariableFunc != nil {
+		return m.SetEnvironmentVariableFunc(ctx, projectID, envID, input)
+	}
+	return nil, nil
+}
+
+// DeleteEnvironmentVariable implements VariableAPI.
+func (m *MockClient) DeleteEnvironmentVariable(ctx context.Context, projectID, envID, name string) error {
+	m.Calls = append(m.Calls, MockCall{Method: "DeleteEnvironmentVariable", Args: []any{projectID, envID, name}})
+	if m.DeleteEnvironmentVariableFunc != nil {
+		return m.DeleteEnvironmentVariableFunc(ctx, projectID, envID, name)
+	}
+	return nil
 }
 
 // Verify MockClient implements API at compile time.

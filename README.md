@@ -40,20 +40,68 @@ export UPSUN_TOKEN=your-api-token
 sol auth:info  # Shows authentication via environment variable
 ```
 
-### Commands (Coming Soon)
+### Projects & Environments
 
 ```bash
-# List projects (JSON output)
+# List projects
 sol project:list
 
-# List projects (token-efficient for LLMs)
-sol project:list --output toon
+# Project details
+sol project:info PROJECT_ID
 
-# List projects (human-readable)
-sol project:list --output text
+# List environments
+sol environment:list --project PROJECT_ID
+
+# Environment details
+sol environment:info main --project PROJECT_ID
 
 # SSH into environment
-sol ssh --project abc123 --environment main
+sol ssh --project PROJECT_ID --environment main
+```
+
+### Activities
+
+```bash
+# List recent activities
+sol activity:list --project PROJECT_ID
+
+# Filter by state/type
+sol activity:list --project PROJECT_ID --state complete --limit 5
+
+# View activity log
+sol activity:log ACTIVITY_ID --project PROJECT_ID
+```
+
+### Variables
+
+```bash
+# List project variables
+sol variable:list --project PROJECT_ID
+
+# List environment variables
+sol variable:list --project PROJECT_ID --environment main
+
+# Set a variable
+sol variable:set MY_VAR "value" --project PROJECT_ID
+
+# Set sensitive variable (value hidden)
+sol variable:set SECRET "value" --project PROJECT_ID --sensitive
+
+# Delete a variable
+sol variable:delete MY_VAR --project PROJECT_ID
+```
+
+### Output Formats
+
+```bash
+# JSON (default) - machine-parseable
+sol project:list --output json
+
+# TOON - token-efficient for LLMs (coming soon)
+sol project:list --output toon
+
+# Text - human-readable (coming soon)
+sol project:list --output text
 ```
 
 ## Global Flags
@@ -65,6 +113,7 @@ sol ssh --project abc123 --environment main
 | `--environment` | `-e` | | Environment name |
 | `--quiet` | `-q` | `false` | Suppress non-essential output |
 | `--no-cache` | | `false` | Bypass cache for this request |
+| `--debug` | | `false` | Show API request/response details |
 
 ## Configuration
 

@@ -2,66 +2,29 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
-	"os"
-
-	"github.com/spf13/cobra"
 
 	"github.com/menor/sol/internal/auth"
-	"github.com/menor/sol/internal/cli"
 	clierrors "github.com/menor/sol/internal/errors"
 )
 
-func init() {
-	// Add auth commands directly to root so "sol auth:login" works
-	// (not "sol auth login" - we use colon convention like Upsun CLI)
-	rootCmd.AddCommand(loginCmd)
-	rootCmd.AddCommand(logoutCmd)
-	rootCmd.AddCommand(authInfoCmd)
-
-	// Add --force flag to login command
-	loginCmd.Flags().BoolP("force", "f", false, "Force re-authentication even if already logged in")
+// AuthLoginCmd logs in to Upsun.
+type AuthLoginCmd struct {
+	Force bool `help:"Force re-authentication even if already logged in" short:"f"`
 }
 
-var loginCmd = &cobra.Command{
-	Use:   "auth:login",
-	Short: "Log in to Upsun",
-	Long: `Authenticate with Upsun using OAuth2.
-
-This command opens your browser to complete authentication.
-After successful login, your credentials are stored securely
-in the system keychain.
-
-For CI/automated environments, use the UPSUN_TOKEN environment
-variable instead of interactive login.`,
-	RunE: runLogin,
-}
-
-func runLogin(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	cfg, err := cli.FromCommand(cmd)
-	if err != nil {
-		return err
-	}
-
-	force, _ := cmd.Flags().GetBool("force")
-
-	// Create service with default (production) dependencies
+// Run executes the auth:login command.
+func (c *AuthLoginCmd) Run(ctx *Context) error {
 	svc := auth.DefaultService()
 
-	// Progress callback prints to stderr (only if not quiet)
 	progress := func(msg string) {
-		if !cfg.Quiet {
-			fmt.Fprintln(os.Stderr, msg)
-		}
+		ctx.Log(msg)
 	}
 
 	result, err := svc.Login(ctx, auth.LoginOptions{
-		Force:      force,
+		Force:      c.Force,
 		OnProgress: progress,
 	})
 	if err != nil {
-		// Already logged in is not an error - just inform the user
 		if errors.Is(err, auth.ErrAlreadyLoggedIn) {
 			progress("Already logged in. Use --force to re-authenticate.")
 			return nil
@@ -69,78 +32,52 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		return clierrors.NewAuthError("authentication failed").WithDetail("cause", err.Error())
 	}
 
-	return cfg.Formatter().Write(map[string]any{
+	return ctx.Output(map[string]any{
 		"status":     "authenticated",
 		"expires_at": result.ExpiresAt,
 	})
 }
 
-var logoutCmd = &cobra.Command{
-	Use:   "auth:logout",
-	Short: "Log out of Upsun",
-	Long: `Remove stored authentication credentials.
+// AuthLogoutCmd logs out of Upsun.
+type AuthLogoutCmd struct{}
 
-This deletes your access and refresh tokens from the system keychain.`,
-	RunE: runLogout,
-}
-
-func runLogout(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	cfg, err := cli.FromCommand(cmd)
-	if err != nil {
-		return err
-	}
-
+// Run executes the auth:logout command.
+func (c *AuthLogoutCmd) Run(ctx *Context) error {
 	svc := auth.DefaultService()
 
-	// Check if logged in first to give appropriate message
 	status, err := svc.Status(ctx)
 	if err != nil {
-		return clierrors.NewInternalError(fmt.Sprintf("check status: %v", err))
+		return clierrors.NewInternalError("check status: " + err.Error())
 	}
 
 	if !status.Authenticated || status.Method == "environment_variable" {
-		if !cfg.Quiet {
-			fmt.Fprintln(os.Stderr, "Not currently logged in via keychain.")
-		}
+		ctx.Log("Not currently logged in via keychain.")
 		return nil
 	}
 
 	if err := svc.Logout(ctx); err != nil {
-		return clierrors.NewInternalError(fmt.Sprintf("logout: %v", err))
+		return clierrors.NewInternalError("logout: " + err.Error())
 	}
 
-	if !cfg.Quiet {
-		fmt.Fprintln(os.Stderr, "Logged out successfully.")
-	}
+	ctx.Log("Logged out successfully.")
 
-	return cfg.Formatter().Write(map[string]any{
+	return ctx.Output(map[string]any{
 		"status": "logged_out",
 	})
 }
 
-var authInfoCmd = &cobra.Command{
-	Use:   "auth:info",
-	Short: "Show authentication status",
-	Long:  `Display information about current authentication status.`,
-	RunE:  runAuthInfo,
-}
+// AuthInfoCmd shows authentication status.
+type AuthInfoCmd struct{}
 
-func runAuthInfo(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	cfg, err := cli.FromCommand(cmd)
-	if err != nil {
-		return err
-	}
-
+// Run executes the auth:info command.
+func (c *AuthInfoCmd) Run(ctx *Context) error {
 	svc := auth.DefaultService()
 
 	status, err := svc.Status(ctx)
 	if err != nil {
-		return clierrors.NewInternalError(fmt.Sprintf("get status: %v", err))
+		return clierrors.NewInternalError("get status: " + err.Error())
 	}
 
-	// Build response map
 	info := map[string]any{
 		"authenticated": status.Authenticated,
 	}
@@ -164,5 +101,5 @@ func runAuthInfo(cmd *cobra.Command, args []string) error {
 		info["hint"] = status.Hint
 	}
 
-	return cfg.Formatter().Write(info)
+	return ctx.Output(info)
 }

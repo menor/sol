@@ -8,10 +8,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/spf13/cobra"
-
-	"github.com/menor/sol/internal/api"
-	"github.com/menor/sol/internal/cli"
 	"github.com/menor/sol/internal/errors"
 )
 
@@ -19,65 +15,34 @@ import (
 // Must start with alphanumeric character.
 var validAppName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]*$`)
 
-func init() {
-	rootCmd.AddCommand(sshCmd)
-
-	// --app is ssh-specific, not a global flag
-	sshCmd.Flags().StringP("app", "A", "", "Application name (for multi-app projects)")
+// SSHCmd opens an SSH connection to an environment.
+type SSHCmd struct {
+	App     string   `help:"Application name (for multi-app projects)" short:"A"`
+	Command []string `arg:"" optional:"" passthrough:"" help:"Command to run on remote (after --)"`
 }
 
-var sshCmd = &cobra.Command{
-	Use:   "ssh [-- command]",
-	Short: "SSH into an environment",
-	Long: `Open an SSH connection to an environment.
-
-Without arguments, opens an interactive shell. With a command after --,
-executes that command on the remote environment.
-
-Examples:
-  sol ssh                           # Interactive shell
-  sol ssh -p myproject -e main      # SSH to specific project/environment
-  sol ssh -- ls -la                 # Run command on remote`,
-	RunE:               runSSH,
-	DisableFlagParsing: false,
-}
-
-func runSSH(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	cfg, err := cli.FromCommand(cmd)
-	if err != nil {
-		return err
-	}
-
-	projectID := cfg.ProjectID
+// Run executes the ssh command.
+func (c *SSHCmd) Run(ctx *Context) error {
+	projectID := ctx.ProjectID()
 	if projectID == "" {
-		projectID = detectProjectID()
-		if projectID == "" {
-			return errors.NewValidationError("no project specified").
-				WithHint("Use --project or run from within a project directory")
-		}
+		return errors.NewValidationError("no project specified").
+			WithHint("Use --project or run from within a project directory")
 	}
 
-	envID := cfg.Environment
+	envID := ctx.EnvironmentID()
 	if envID == "" {
-		envID = detectEnvironmentID()
-		if envID == "" {
-			return errors.NewValidationError("no environment specified").
-				WithHint("Use --environment or run from within an environment")
-		}
+		return errors.NewValidationError("no environment specified").
+			WithHint("Use --environment or run from within an environment")
 	}
-
-	appName, _ := cmd.Flags().GetString("app")
 
 	// Validate app name to prevent SSH argument injection
-	if appName != "" && !validAppName.MatchString(appName) {
+	if c.App != "" && !validAppName.MatchString(c.App) {
 		return errors.NewValidationError("invalid app name").
-			WithDetail("app", appName).
+			WithDetail("app", c.App).
 			WithHint("App names must start with a letter or digit and contain only letters, digits, underscores, or hyphens")
 	}
 
-	// Create API client
-	client, err := newAPIClient(ctx)
+	client, err := ctx.APIClient()
 	if err != nil {
 		return errors.NewAuthError("failed to create API client").WithDetail("cause", err.Error())
 	}
@@ -85,13 +50,7 @@ func runSSH(cmd *cobra.Command, args []string) error {
 	// Get environment to find SSH URL
 	env, err := client.GetEnvironment(ctx, projectID, envID)
 	if err != nil {
-		if apiErr, ok := err.(*api.APIError); ok {
-			if apiErr.StatusCode == 404 {
-				return errors.NewNotFoundError("environment", envID)
-			}
-			return errors.NewAPIError(apiErr.Message, apiErr.StatusCode)
-		}
-		return errors.NewInternalError(fmt.Sprintf("get environment: %v", err))
+		return handleAPIError(err, "environment", envID)
 	}
 
 	// Get SSH URL from _links
@@ -102,19 +61,17 @@ func runSSH(cmd *cobra.Command, args []string) error {
 	}
 
 	// Modify SSH URL for specific app if requested
-	if appName != "" {
-		sshURL = modifySSHURLForApp(sshURL, appName)
+	if c.App != "" {
+		sshURL = modifySSHURLForApp(sshURL, c.App)
 	}
 
 	// Parse and execute SSH
 	sshArgs := parseSSHURL(sshURL)
-	if len(args) > 0 {
-		sshArgs = append(sshArgs, args...)
+	if len(c.Command) > 0 {
+		sshArgs = append(sshArgs, c.Command...)
 	}
 
-	if !cfg.Quiet {
-		fmt.Fprintf(os.Stderr, "Connecting to %s...\n", envID)
-	}
+	ctx.Log("Connecting to %s...", envID)
 
 	return execSSH(ctx, sshArgs)
 }
@@ -157,7 +114,6 @@ func modifySSHURLForApp(sshURL, appName string) string {
 
 // execSSH executes the ssh command with the given arguments.
 // The process runs as a child and inherits stdin/stdout/stderr.
-// The context can be used to cancel the SSH session.
 func execSSH(ctx context.Context, args []string) error {
 	sshPath, err := exec.LookPath("ssh")
 	if err != nil {
@@ -165,7 +121,6 @@ func execSSH(ctx context.Context, args []string) error {
 			WithHint("Ensure OpenSSH is installed and in your PATH")
 	}
 
-	// Execute ssh as a child process with context for cancellation
 	cmd := exec.CommandContext(ctx, sshPath, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

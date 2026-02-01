@@ -101,36 +101,48 @@ Default output is JSON. The `--output` flag supports:
 - `toon` - token-optimized notation (not yet implemented)
 - `text` - human-readable text
 
-### Config Pattern (IMPORTANT)
+### Kong Command Pattern (IMPORTANT)
 
-All commands should use `cli.FromCommand(cmd)` to extract configuration:
+Sol uses Kong for CLI parsing. Commands are structs with a `Run` method:
 
 ```go
-func runMyCommand(cmd *cobra.Command, args []string) error {
-    cfg, err := cli.FromCommand(cmd)
+// Command struct with flags as fields
+type MyCmd struct {
+    Name  string `arg:"" help:"The name to use"`
+    Force bool   `help:"Force operation" short:"f"`
+}
+
+// Run method receives the Context
+func (c *MyCmd) Run(ctx *Context) error {
+    // Access global flags via ctx.CLI
+    projectID := ctx.ProjectID()  // Helper that checks flag then env
+
+    // Create API client
+    client, err := ctx.APIClient()
     if err != nil {
         return err
     }
 
-    // Use cfg.Formatter() for output - respects --output flag
-    return cfg.Formatter().Write(result)
+    // Do work...
+
+    // Output using configured format
+    return ctx.Output(result)
 }
 ```
 
-**Never use `output.New("json")` directly** - this ignores the user's `--output` flag.
+**Never use `output.New("json")` directly** - use `ctx.Output()` which respects the `--output` flag.
 
 ### Service Layer Pattern (IMPORTANT)
 
 Business logic should live in services, not CLI command handlers. CLI commands should only:
-1. Parse flags and arguments
+1. Get configuration from Context
 2. Create the service with dependencies
 3. Call the service method
 4. Format and output the result
 
 ```go
 // Good: CLI delegates to service
-func runMyCommand(cmd *cobra.Command, args []string) error {
-    cfg, _ := cli.FromCommand(cmd)
+func (c *MyCmd) Run(ctx *Context) error {
     svc := mypackage.DefaultService()  // Production dependencies
 
     result, err := svc.DoSomething(ctx, options)
@@ -138,11 +150,11 @@ func runMyCommand(cmd *cobra.Command, args []string) error {
         return errors.NewAuthError(err.Error())
     }
 
-    return cfg.Formatter().Write(result)
+    return ctx.Output(result)
 }
 
 // Bad: Business logic in CLI handler
-func runMyCommand(cmd *cobra.Command, args []string) error {
+func (c *MyCmd) Run(ctx *Context) error {
     // Don't do 100 lines of orchestration here
 }
 ```
@@ -289,24 +301,44 @@ path := fmt.Sprintf("/v1/projects/%s", url.PathEscape(projectID))
 
 ### Testing Patterns
 
-**Factory variables for dependency injection:**
+**Context injection for testing:**
+
+Tests create fresh CLI and Context structs with mock dependencies injected:
+
 ```go
-// In production code - allows test override
-var newAPIClient = func(ctx context.Context) (api.API, error) {
-    return api.New(ctx)
-}
-
-var getEnv = os.Getenv  // Wraps os.Getenv for testability
-
-// In tests
-func TestMyCommand(t *testing.T) {
-    originalFactory := newAPIClient
-    defer func() { newAPIClient = originalFactory }()
-
-    newAPIClient = func(ctx context.Context) (api.API, error) {
-        return &api.MockClient{...}, nil
+func TestMyCmd_Success(t *testing.T) {
+    mockClient := &api.MockClient{
+        GetProjectFunc: func(ctx context.Context, id string) (*api.Project, error) {
+            return &api.Project{ID: id, Title: "Test"}, nil
+        },
     }
-    // ... test code
+
+    // Create fresh CLI and Context - no globals to manage
+    cli := &CLI{Output: "json"}
+    ctx := &Context{
+        Context: context.Background(),
+        CLI:     cli,
+        apiClientFactory: func(ctx context.Context) (api.API, error) {
+            return mockClient, nil
+        },
+        getEnvFunc: func(key string) string {
+            if key == "PLATFORM_PROJECT" {
+                return "proj123"
+            }
+            return ""
+        },
+    }
+
+    cmd := &MyCmd{Name: "test"}
+    err := cmd.Run(ctx)
+    if err != nil {
+        t.Fatalf("unexpected error: %v", err)
+    }
+
+    // Verify mock was called correctly
+    if len(mockClient.Calls) != 1 {
+        t.Errorf("expected 1 call, got %d", len(mockClient.Calls))
+    }
 }
 ```
 

@@ -1,129 +1,64 @@
 package cmd
 
 import (
-	"fmt"
-
-	"github.com/spf13/cobra"
-
-	"github.com/menor/sol/internal/api"
-	"github.com/menor/sol/internal/cli"
 	"github.com/menor/sol/internal/errors"
 )
 
-func init() {
-	rootCmd.AddCommand(environmentListCmd)
-	rootCmd.AddCommand(environmentInfoCmd)
-}
+// EnvironmentListCmd lists all environments in a project.
+type EnvironmentListCmd struct{}
 
-var environmentListCmd = &cobra.Command{
-	Use:   "environment:list",
-	Short: "List all environments in a project",
-	Long: `List all environments (branches) in a project.
-
-Returns a JSON array of environments with their IDs, names, types, and status.`,
-	Aliases: []string{"environments", "env:list"},
-	RunE:    runEnvironmentList,
-}
-
-func runEnvironmentList(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	cfg, err := cli.FromCommand(cmd)
-	if err != nil {
-		return err
-	}
-
-	projectID := cfg.ProjectID
+// Run executes the environment:list command.
+func (c *EnvironmentListCmd) Run(ctx *Context) error {
+	projectID := ctx.ProjectID()
 	if projectID == "" {
-		projectID = detectProjectID()
-		if projectID == "" {
-			return errors.NewValidationError("no project specified").
-				WithHint("Use --project or run from within a project directory")
-		}
+		return errors.NewValidationError("no project specified").
+			WithHint("Use --project or run from within a project directory")
 	}
 
-	client, err := newAPIClient(ctx)
+	client, err := ctx.APIClient()
 	if err != nil {
 		return errors.NewAuthError("failed to create API client").WithDetail("cause", err.Error())
 	}
 
 	environments, err := client.ListEnvironments(ctx, projectID)
 	if err != nil {
-		if apiErr, ok := err.(*api.APIError); ok {
-			if apiErr.StatusCode == 404 {
-				return errors.NewNotFoundError("project", projectID)
-			}
-			return errors.NewAPIError(apiErr.Message, apiErr.StatusCode)
-		}
-		return errors.NewInternalError(fmt.Sprintf("list environments: %v", err))
+		return handleAPIError(err, "project", projectID)
 	}
 
-	return cfg.Formatter().Write(environments)
+	return ctx.Output(environments)
 }
 
-var environmentInfoCmd = &cobra.Command{
-	Use:   "environment:info [environment-id]",
-	Short: "Show environment details",
-	Long: `Show detailed information about a specific environment.
-
-If no environment ID is provided, uses the current environment from the
-local git branch or PLATFORM_BRANCH environment variable.`,
-	Aliases: []string{"env:info"},
-	Args:    cobra.MaximumNArgs(1),
-	RunE:    runEnvironmentInfo,
+// EnvironmentInfoCmd shows environment details.
+type EnvironmentInfoCmd struct {
+	EnvironmentID string `arg:"" optional:"" help:"Environment ID (uses --environment or PLATFORM_BRANCH if not specified)"`
 }
 
-func runEnvironmentInfo(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	cfg, err := cli.FromCommand(cmd)
-	if err != nil {
-		return err
-	}
-
-	projectID := cfg.ProjectID
+// Run executes the environment:info command.
+func (c *EnvironmentInfoCmd) Run(ctx *Context) error {
+	projectID := ctx.ProjectID()
 	if projectID == "" {
-		projectID = detectProjectID()
-		if projectID == "" {
-			return errors.NewValidationError("no project specified").
-				WithHint("Use --project or run from within a project directory")
-		}
+		return errors.NewValidationError("no project specified").
+			WithHint("Use --project or run from within a project directory")
 	}
 
-	// Get environment ID from args or detect from environment
-	var envID string
-	if len(args) > 0 {
-		envID = args[0]
-	} else {
-		envID = detectEnvironmentID()
+	envID := c.EnvironmentID
+	if envID == "" {
+		envID = ctx.EnvironmentID()
 		if envID == "" {
 			return errors.NewValidationError("no environment specified").
-				WithHint("Provide an environment ID or run from within an environment")
+				WithHint("Provide an environment ID or use --environment flag")
 		}
 	}
 
-	client, err := newAPIClient(ctx)
+	client, err := ctx.APIClient()
 	if err != nil {
 		return errors.NewAuthError("failed to create API client").WithDetail("cause", err.Error())
 	}
 
 	env, err := client.GetEnvironment(ctx, projectID, envID)
 	if err != nil {
-		if apiErr, ok := err.(*api.APIError); ok {
-			if apiErr.StatusCode == 404 {
-				return errors.NewNotFoundError("environment", envID)
-			}
-			return errors.NewAPIError(apiErr.Message, apiErr.StatusCode)
-		}
-		return errors.NewInternalError(fmt.Sprintf("get environment: %v", err))
+		return handleAPIError(err, "environment", envID)
 	}
 
-	return cfg.Formatter().Write(env)
-}
-
-// detectEnvironmentID attempts to determine the current environment from context.
-// It checks:
-// 1. PLATFORM_BRANCH environment variable
-// 2. Current git branch (TODO)
-func detectEnvironmentID() string {
-	// Use getEnv wrapper (defined in project.go) for testability
-	return getEnv("PLATFORM_BRANCH")
+	return ctx.Output(env)
 }

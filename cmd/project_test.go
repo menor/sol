@@ -8,13 +8,7 @@ import (
 	"github.com/menor/sol/internal/api"
 )
 
-func TestRunProjectList_Success(t *testing.T) {
-	// Save and restore the original factory
-	originalFactory := newAPIClient
-	defer func() { newAPIClient = originalFactory }()
-
-	// Set up mock client
-	// Note: ListProjects follows HAL links to /ref/projects for full details.
+func TestProjectListCmd_Success(t *testing.T) {
 	mockClient := &api.MockClient{
 		ListProjectsFunc: func(ctx context.Context) ([]api.ProjectRef, error) {
 			return []api.ProjectRef{
@@ -23,13 +17,18 @@ func TestRunProjectList_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	newAPIClient = func(ctx context.Context) (api.API, error) {
-		return mockClient, nil
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
 	}
 
-	// Execute command
-	rootCmd.SetArgs([]string{"project:list", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &ProjectListCmd{}
+	err := cmd.Run(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -43,21 +42,7 @@ func TestRunProjectList_Success(t *testing.T) {
 	}
 }
 
-func TestRunProjectInfo_Success(t *testing.T) {
-	// Save and restore the original factory and getEnv
-	originalFactory := newAPIClient
-	originalGetEnv := getEnv
-	defer func() {
-		newAPIClient = originalFactory
-		getEnv = originalGetEnv
-	}()
-
-	// Mock environment
-	getEnv = func(key string) string {
-		return "" // Force project ID from args
-	}
-
-	// Set up mock client
+func TestProjectInfoCmd_Success(t *testing.T) {
 	mockClient := &api.MockClient{
 		GetProjectFunc: func(ctx context.Context, projectID string) (*api.Project, error) {
 			return &api.Project{
@@ -68,13 +53,19 @@ func TestRunProjectInfo_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	newAPIClient = func(ctx context.Context) (api.API, error) {
-		return mockClient, nil
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
 	}
 
-	// Execute command
-	rootCmd.SetArgs([]string{"project:info", "proj123", "--output", "json"})
-	err := rootCmd.Execute()
+	// Test with explicit project ID argument
+	cmd := &ProjectInfoCmd{ProjectID: "proj123"}
+	err := cmd.Run(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -91,21 +82,7 @@ func TestRunProjectInfo_Success(t *testing.T) {
 	}
 }
 
-func TestRunProjectInfo_NotFound(t *testing.T) {
-	// Save and restore the original factory
-	originalFactory := newAPIClient
-	originalGetEnv := getEnv
-	defer func() {
-		newAPIClient = originalFactory
-		getEnv = originalGetEnv
-	}()
-
-	// Mock environment
-	getEnv = func(key string) string {
-		return ""
-	}
-
-	// Set up mock client that returns 404
+func TestProjectInfoCmd_NotFound(t *testing.T) {
 	mockClient := &api.MockClient{
 		GetProjectFunc: func(ctx context.Context, projectID string) (*api.Project, error) {
 			return nil, &api.APIError{
@@ -114,73 +91,71 @@ func TestRunProjectInfo_NotFound(t *testing.T) {
 			}
 		},
 	}
-	newAPIClient = func(ctx context.Context) (api.API, error) {
-		return mockClient, nil
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
 	}
 
-	// Execute command
-	rootCmd.SetArgs([]string{"project:info", "nonexistent", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &ProjectInfoCmd{ProjectID: "nonexistent"}
+	err := cmd.Run(ctx)
 	if err == nil {
 		t.Fatal("expected error for nonexistent project")
 	}
-
-	// The error should mention "not found"
-	errStr := err.Error()
-	if errStr == "" {
-		t.Error("expected non-empty error message")
-	}
 }
 
-func TestRunProjectInfo_NoProjectSpecified(t *testing.T) {
-	// Save and restore the original getEnv
-	originalGetEnv := getEnv
-	defer func() { getEnv = originalGetEnv }()
-
-	// Mock environment to return nothing
-	getEnv = func(key string) string {
-		return ""
+func TestProjectInfoCmd_NoProjectSpecified(t *testing.T) {
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		getEnvFunc: func(key string) string {
+			return "" // No project in environment
+		},
 	}
 
-	// Execute command without project ID
-	rootCmd.SetArgs([]string{"project:info", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &ProjectInfoCmd{} // No project ID
+	err := cmd.Run(ctx)
 	if err == nil {
 		t.Fatal("expected error when no project specified")
 	}
 }
 
-func TestDetectProjectID(t *testing.T) {
-	// Save and restore the original getEnv
-	originalGetEnv := getEnv
-	defer func() { getEnv = originalGetEnv }()
-
-	tests := []struct {
-		name    string
-		envVars map[string]string
-		want    string
-	}{
-		{
-			name:    "from PLATFORM_PROJECT",
-			envVars: map[string]string{"PLATFORM_PROJECT": "proj123"},
-			want:    "proj123",
-		},
-		{
-			name:    "empty when not set",
-			envVars: map[string]string{},
-			want:    "",
+func TestProjectID_FromEnvironment(t *testing.T) {
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			getEnv = func(key string) string {
-				return tt.envVars[key]
-			}
-			got := detectProjectID()
-			if got != tt.want {
-				t.Errorf("detectProjectID() = %q, want %q", got, tt.want)
-			}
-		})
+	got := ctx.ProjectID()
+	if got != "proj123" {
+		t.Errorf("ProjectID() = %q, want %q", got, "proj123")
+	}
+}
+
+func TestProjectID_FromFlag(t *testing.T) {
+	cli := &CLI{Output: "json", Project: "flag-project"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		getEnvFunc: func(key string) string {
+			return "env-project" // Should be overridden by flag
+		},
+	}
+
+	got := ctx.ProjectID()
+	if got != "flag-project" {
+		t.Errorf("ProjectID() = %q, want %q", got, "flag-project")
 	}
 }

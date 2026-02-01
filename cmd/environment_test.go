@@ -8,24 +8,7 @@ import (
 	"github.com/menor/sol/internal/api"
 )
 
-func TestRunEnvironmentList_Success(t *testing.T) {
-	// Save and restore originals
-	originalFactory := newAPIClient
-	originalGetEnv := getEnv
-	defer func() {
-		newAPIClient = originalFactory
-		getEnv = originalGetEnv
-	}()
-
-	// Mock environment
-	getEnv = func(key string) string {
-		if key == "PLATFORM_PROJECT" {
-			return "proj123"
-		}
-		return ""
-	}
-
-	// Set up mock client
+func TestEnvironmentListCmd_Success(t *testing.T) {
 	mockClient := &api.MockClient{
 		ListEnvironmentsFunc: func(ctx context.Context, projectID string) ([]api.Environment, error) {
 			return []api.Environment{
@@ -34,13 +17,24 @@ func TestRunEnvironmentList_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	newAPIClient = func(ctx context.Context) (api.API, error) {
-		return mockClient, nil
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
 	}
 
-	// Execute command
-	rootCmd.SetArgs([]string{"environment:list", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &EnvironmentListCmd{}
+	err := cmd.Run(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -57,24 +51,7 @@ func TestRunEnvironmentList_Success(t *testing.T) {
 	}
 }
 
-func TestRunEnvironmentInfo_Success(t *testing.T) {
-	// Save and restore originals
-	originalFactory := newAPIClient
-	originalGetEnv := getEnv
-	defer func() {
-		newAPIClient = originalFactory
-		getEnv = originalGetEnv
-	}()
-
-	// Mock environment
-	getEnv = func(key string) string {
-		if key == "PLATFORM_PROJECT" {
-			return "proj123"
-		}
-		return ""
-	}
-
-	// Set up mock client
+func TestEnvironmentInfoCmd_Success(t *testing.T) {
 	mockClient := &api.MockClient{
 		GetEnvironmentFunc: func(ctx context.Context, projectID, envID string) (*api.Environment, error) {
 			return &api.Environment{
@@ -87,13 +64,24 @@ func TestRunEnvironmentInfo_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	newAPIClient = func(ctx context.Context) (api.API, error) {
-		return mockClient, nil
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
 	}
 
-	// Execute command
-	rootCmd.SetArgs([]string{"environment:info", "main", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &EnvironmentInfoCmd{EnvironmentID: "main"}
+	err := cmd.Run(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -113,24 +101,7 @@ func TestRunEnvironmentInfo_Success(t *testing.T) {
 	}
 }
 
-func TestRunEnvironmentInfo_NotFound(t *testing.T) {
-	// Save and restore originals
-	originalFactory := newAPIClient
-	originalGetEnv := getEnv
-	defer func() {
-		newAPIClient = originalFactory
-		getEnv = originalGetEnv
-	}()
-
-	// Mock environment
-	getEnv = func(key string) string {
-		if key == "PLATFORM_PROJECT" {
-			return "proj123"
-		}
-		return ""
-	}
-
-	// Set up mock client that returns 404
+func TestEnvironmentInfoCmd_NotFound(t *testing.T) {
 	mockClient := &api.MockClient{
 		GetEnvironmentFunc: func(ctx context.Context, projectID, envID string) (*api.Environment, error) {
 			return nil, &api.APIError{
@@ -139,67 +110,61 @@ func TestRunEnvironmentInfo_NotFound(t *testing.T) {
 			}
 		},
 	}
-	newAPIClient = func(ctx context.Context) (api.API, error) {
-		return mockClient, nil
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
 	}
 
-	// Execute command
-	rootCmd.SetArgs([]string{"environment:info", "nonexistent", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &EnvironmentInfoCmd{EnvironmentID: "nonexistent"}
+	err := cmd.Run(ctx)
 	if err == nil {
 		t.Fatal("expected error for nonexistent environment")
 	}
 }
 
-func TestRunEnvironmentList_NoProjectSpecified(t *testing.T) {
-	// Save and restore originals
-	originalGetEnv := getEnv
-	defer func() { getEnv = originalGetEnv }()
-
-	// Mock environment to return nothing
-	getEnv = func(key string) string {
-		return ""
+func TestEnvironmentListCmd_NoProjectSpecified(t *testing.T) {
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		getEnvFunc: func(key string) string {
+			return "" // No project in environment
+		},
 	}
 
-	// Execute command without project
-	rootCmd.SetArgs([]string{"environment:list", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &EnvironmentListCmd{}
+	err := cmd.Run(ctx)
 	if err == nil {
 		t.Fatal("expected error when no project specified")
 	}
 }
 
-func TestDetectEnvironmentID(t *testing.T) {
-	// Save and restore originals
-	originalGetEnv := getEnv
-	defer func() { getEnv = originalGetEnv }()
-
-	tests := []struct {
-		name    string
-		envVars map[string]string
-		want    string
-	}{
-		{
-			name:    "from PLATFORM_BRANCH",
-			envVars: map[string]string{"PLATFORM_BRANCH": "main"},
-			want:    "main",
-		},
-		{
-			name:    "empty when not set",
-			envVars: map[string]string{},
-			want:    "",
+func TestEnvironmentID_FromEnvironment(t *testing.T) {
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_BRANCH" {
+				return "main"
+			}
+			return ""
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			getEnv = func(key string) string {
-				return tt.envVars[key]
-			}
-			got := detectEnvironmentID()
-			if got != tt.want {
-				t.Errorf("detectEnvironmentID() = %q, want %q", got, tt.want)
-			}
-		})
+	got := ctx.EnvironmentID()
+	if got != "main" {
+		t.Errorf("EnvironmentID() = %q, want %q", got, "main")
 	}
 }

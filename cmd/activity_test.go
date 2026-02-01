@@ -8,29 +8,7 @@ import (
 	"github.com/menor/sol/internal/api"
 )
 
-func TestRunActivityList_Success(t *testing.T) {
-	// Save and restore the original factory
-	originalFactory := newAPIClient
-	originalGetEnv := getEnv
-	defer func() {
-		newAPIClient = originalFactory
-		getEnv = originalGetEnv
-	}()
-
-	// Reset global flag state (Cobra flags persist between tests)
-	activityLimit = 10
-	activityType = ""
-	activityState = ""
-
-	// Mock environment
-	getEnv = func(key string) string {
-		if key == "PLATFORM_PROJECT" {
-			return "proj123"
-		}
-		return ""
-	}
-
-	// Set up mock client
+func TestActivityListCmd_Success(t *testing.T) {
 	mockClient := &api.MockClient{
 		ListActivitiesFunc: func(ctx context.Context, projectID string, opts *api.ListActivitiesOptions) ([]api.Activity, error) {
 			return []api.Activity{
@@ -54,13 +32,26 @@ func TestRunActivityList_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	newAPIClient = func(ctx context.Context) (api.API, error) {
-		return mockClient, nil
+
+	// Create fresh CLI and context - no globals to reset!
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
 	}
 
-	// Execute command
-	rootCmd.SetArgs([]string{"activity:list", "--output", "json"})
-	err := rootCmd.Execute()
+	// Run the command directly
+	cmd := &ActivityListCmd{Limit: 10}
+	err := cmd.Run(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -74,41 +65,30 @@ func TestRunActivityList_Success(t *testing.T) {
 	}
 }
 
-func TestRunActivityLog_Success(t *testing.T) {
-	// Save and restore the original factory
-	originalFactory := newAPIClient
-	originalGetEnv := getEnv
-	defer func() {
-		newAPIClient = originalFactory
-		getEnv = originalGetEnv
-	}()
-
-	// Reset global flag state
-	activityLimit = 10
-	activityType = ""
-	activityState = ""
-
-	// Mock environment
-	getEnv = func(key string) string {
-		if key == "PLATFORM_PROJECT" {
-			return "proj123"
-		}
-		return ""
-	}
-
-	// Set up mock client
+func TestActivityLogCmd_Success(t *testing.T) {
 	mockClient := &api.MockClient{
 		GetActivityLogFunc: func(ctx context.Context, projectID, activityID string) (string, error) {
 			return "Building application...\nDeploying...\nDone.", nil
 		},
 	}
-	newAPIClient = func(ctx context.Context) (api.API, error) {
-		return mockClient, nil
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
 	}
 
-	// Execute command
-	rootCmd.SetArgs([]string{"activity:log", "act123", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &ActivityLogCmd{ActivityID: "act123"}
+	err := cmd.Run(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -125,29 +105,7 @@ func TestRunActivityLog_Success(t *testing.T) {
 	}
 }
 
-func TestRunActivityLog_NotFound(t *testing.T) {
-	// Save and restore the original factory
-	originalFactory := newAPIClient
-	originalGetEnv := getEnv
-	defer func() {
-		newAPIClient = originalFactory
-		getEnv = originalGetEnv
-	}()
-
-	// Reset global flag state
-	activityLimit = 10
-	activityType = ""
-	activityState = ""
-
-	// Mock environment
-	getEnv = func(key string) string {
-		if key == "PLATFORM_PROJECT" {
-			return "proj123"
-		}
-		return ""
-	}
-
-	// Set up mock client that returns 404
+func TestActivityLogCmd_NotFound(t *testing.T) {
 	mockClient := &api.MockClient{
 		GetActivityLogFunc: func(ctx context.Context, projectID, activityID string) (string, error) {
 			return "", &api.APIError{
@@ -156,36 +114,41 @@ func TestRunActivityLog_NotFound(t *testing.T) {
 			}
 		},
 	}
-	newAPIClient = func(ctx context.Context) (api.API, error) {
-		return mockClient, nil
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
 	}
 
-	// Execute command
-	rootCmd.SetArgs([]string{"activity:log", "nonexistent", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &ActivityLogCmd{ActivityID: "nonexistent"}
+	err := cmd.Run(ctx)
 	if err == nil {
 		t.Fatal("expected error for nonexistent activity")
 	}
 }
 
-func TestRunActivityList_NoProjectSpecified(t *testing.T) {
-	// Save and restore the original getEnv
-	originalGetEnv := getEnv
-	defer func() { getEnv = originalGetEnv }()
-
-	// Reset global flag state
-	activityLimit = 10
-	activityType = ""
-	activityState = ""
-
-	// Mock environment to return nothing
-	getEnv = func(key string) string {
-		return ""
+func TestActivityListCmd_NoProjectSpecified(t *testing.T) {
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		getEnvFunc: func(key string) string {
+			return "" // No project in environment
+		},
 	}
 
-	// Execute command without project
-	rootCmd.SetArgs([]string{"activity:list", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &ActivityListCmd{Limit: 10}
+	err := cmd.Run(ctx)
 	if err == nil {
 		t.Fatal("expected error when no project specified")
 	}

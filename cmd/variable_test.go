@@ -8,27 +8,7 @@ import (
 	"github.com/menor/sol/internal/api"
 )
 
-func TestRunVariableList_ProjectLevel(t *testing.T) {
-	// Save and restore the original factory
-	originalFactory := newAPIClient
-	originalGetEnv := getEnv
-	defer func() {
-		newAPIClient = originalFactory
-		getEnv = originalGetEnv
-	}()
-
-	// Reset global flag state (Cobra flags persist between tests)
-	varLevel = ""
-
-	// Mock environment
-	getEnv = func(key string) string {
-		if key == "PLATFORM_PROJECT" {
-			return "proj123"
-		}
-		return ""
-	}
-
-	// Set up mock client
+func TestVariableListCmd_ProjectLevel(t *testing.T) {
 	mockClient := &api.MockClient{
 		ListProjectVariablesFunc: func(ctx context.Context, projectID string) ([]api.Variable, error) {
 			return []api.Variable{
@@ -53,13 +33,24 @@ func TestRunVariableList_ProjectLevel(t *testing.T) {
 			}, nil
 		},
 	}
-	newAPIClient = func(ctx context.Context) (api.API, error) {
-		return mockClient, nil
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
 	}
 
-	// Execute command
-	rootCmd.SetArgs([]string{"variable:list", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &VariableListCmd{} // No level = defaults to project
+	err := cmd.Run(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -73,27 +64,7 @@ func TestRunVariableList_ProjectLevel(t *testing.T) {
 	}
 }
 
-func TestRunVariableList_EnvironmentLevel(t *testing.T) {
-	// Save and restore the original factory
-	originalFactory := newAPIClient
-	originalGetEnv := getEnv
-	defer func() {
-		newAPIClient = originalFactory
-		getEnv = originalGetEnv
-	}()
-
-	// Reset global flag state (Cobra flags persist between tests)
-	varLevel = ""
-
-	// Mock environment
-	getEnv = func(key string) string {
-		if key == "PLATFORM_PROJECT" {
-			return "proj123"
-		}
-		return ""
-	}
-
-	// Set up mock client
+func TestVariableListCmd_EnvironmentLevel(t *testing.T) {
 	mockClient := &api.MockClient{
 		ListEnvironmentVariablesFunc: func(ctx context.Context, projectID, envID string) ([]api.Variable, error) {
 			return []api.Variable{
@@ -107,13 +78,27 @@ func TestRunVariableList_EnvironmentLevel(t *testing.T) {
 			}, nil
 		},
 	}
-	newAPIClient = func(ctx context.Context) (api.API, error) {
-		return mockClient, nil
+
+	cli := &CLI{Output: "json", Environment: "main"} // Environment flag set
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			if key == "PLATFORM_BRANCH" {
+				return "main"
+			}
+			return ""
+		},
 	}
 
-	// Execute command with --environment flag
-	rootCmd.SetArgs([]string{"variable:list", "--environment", "main", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &VariableListCmd{} // Level auto-detected from environment flag
+	err := cmd.Run(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -127,45 +112,36 @@ func TestRunVariableList_EnvironmentLevel(t *testing.T) {
 	}
 }
 
-func TestRunVariableGet_Success(t *testing.T) {
-	// Save and restore the original factory
-	originalFactory := newAPIClient
-	originalGetEnv := getEnv
-	defer func() {
-		newAPIClient = originalFactory
-		getEnv = originalGetEnv
-	}()
-
-	// Reset global flag state (Cobra flags persist between tests)
-	varLevel = ""
-
-	// Mock environment
-	getEnv = func(key string) string {
-		if key == "PLATFORM_PROJECT" {
-			return "proj123"
-		}
-		return ""
-	}
-
-	// Set up mock client
+func TestVariableGetCmd_Success(t *testing.T) {
 	mockClient := &api.MockClient{
 		GetProjectVariableFunc: func(ctx context.Context, projectID, name string) (*api.Variable, error) {
 			return &api.Variable{
-				ID:          "var1",
-				Name:        name,
-				Value:       "test-value",
-				IsEnabled:   true,
-				CreatedAt:   time.Now(),
+				ID:        "var1",
+				Name:      name,
+				Value:     "test-value",
+				IsEnabled: true,
+				CreatedAt: time.Now(),
 			}, nil
 		},
 	}
-	newAPIClient = func(ctx context.Context) (api.API, error) {
-		return mockClient, nil
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
 	}
 
-	// Execute command (explicitly set --level to override any persisting --environment flag)
-	rootCmd.SetArgs([]string{"variable:get", "MY_VAR", "--level", "project", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &VariableGetCmd{Name: "MY_VAR", Level: "project"}
+	err := cmd.Run(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -182,27 +158,7 @@ func TestRunVariableGet_Success(t *testing.T) {
 	}
 }
 
-func TestRunVariableSet_Success(t *testing.T) {
-	// Save and restore the original factory
-	originalFactory := newAPIClient
-	originalGetEnv := getEnv
-	defer func() {
-		newAPIClient = originalFactory
-		getEnv = originalGetEnv
-	}()
-
-	// Reset global flag state (Cobra flags persist between tests)
-	varLevel = ""
-
-	// Mock environment
-	getEnv = func(key string) string {
-		if key == "PLATFORM_PROJECT" {
-			return "proj123"
-		}
-		return ""
-	}
-
-	// Set up mock client
+func TestVariableSetCmd_Success(t *testing.T) {
 	mockClient := &api.MockClient{
 		SetProjectVariableFunc: func(ctx context.Context, projectID string, input *api.VariableInput) (*api.Variable, error) {
 			return &api.Variable{
@@ -214,13 +170,30 @@ func TestRunVariableSet_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	newAPIClient = func(ctx context.Context) (api.API, error) {
-		return mockClient, nil
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
 	}
 
-	// Execute command (explicitly set --level to override any persisting --environment flag)
-	rootCmd.SetArgs([]string{"variable:set", "MY_VAR", "my-value", "--level", "project", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &VariableSetCmd{
+		Name:           "MY_VAR",
+		Value:          "my-value",
+		Level:          "project",
+		VisibleBuild:   true,
+		VisibleRuntime: true,
+	}
+	err := cmd.Run(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -243,39 +216,30 @@ func TestRunVariableSet_Success(t *testing.T) {
 	}
 }
 
-func TestRunVariableDelete_Success(t *testing.T) {
-	// Save and restore the original factory
-	originalFactory := newAPIClient
-	originalGetEnv := getEnv
-	defer func() {
-		newAPIClient = originalFactory
-		getEnv = originalGetEnv
-	}()
-
-	// Reset global flag state (Cobra flags persist between tests)
-	varLevel = ""
-
-	// Mock environment
-	getEnv = func(key string) string {
-		if key == "PLATFORM_PROJECT" {
-			return "proj123"
-		}
-		return ""
-	}
-
-	// Set up mock client
+func TestVariableDeleteCmd_Success(t *testing.T) {
 	mockClient := &api.MockClient{
 		DeleteProjectVariableFunc: func(ctx context.Context, projectID, name string) error {
 			return nil
 		},
 	}
-	newAPIClient = func(ctx context.Context) (api.API, error) {
-		return mockClient, nil
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
 	}
 
-	// Execute command (explicitly set --level to override any persisting --environment flag)
-	rootCmd.SetArgs([]string{"variable:delete", "MY_VAR", "--level", "project", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &VariableDeleteCmd{Name: "MY_VAR", Level: "project"}
+	err := cmd.Run(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -292,27 +256,7 @@ func TestRunVariableDelete_Success(t *testing.T) {
 	}
 }
 
-func TestRunVariableGet_NotFound(t *testing.T) {
-	// Save and restore the original factory
-	originalFactory := newAPIClient
-	originalGetEnv := getEnv
-	defer func() {
-		newAPIClient = originalFactory
-		getEnv = originalGetEnv
-	}()
-
-	// Reset global flag state (Cobra flags persist between tests)
-	varLevel = ""
-
-	// Mock environment
-	getEnv = func(key string) string {
-		if key == "PLATFORM_PROJECT" {
-			return "proj123"
-		}
-		return ""
-	}
-
-	// Set up mock client that returns 404
+func TestVariableGetCmd_NotFound(t *testing.T) {
 	mockClient := &api.MockClient{
 		GetProjectVariableFunc: func(ctx context.Context, projectID, name string) (*api.Variable, error) {
 			return nil, &api.APIError{
@@ -321,34 +265,41 @@ func TestRunVariableGet_NotFound(t *testing.T) {
 			}
 		},
 	}
-	newAPIClient = func(ctx context.Context) (api.API, error) {
-		return mockClient, nil
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
 	}
 
-	// Execute command (explicitly set --level to override any persisting --environment flag)
-	rootCmd.SetArgs([]string{"variable:get", "NONEXISTENT", "--level", "project", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &VariableGetCmd{Name: "NONEXISTENT", Level: "project"}
+	err := cmd.Run(ctx)
 	if err == nil {
 		t.Fatal("expected error for nonexistent variable")
 	}
 }
 
-func TestRunVariableList_NoProjectSpecified(t *testing.T) {
-	// Save and restore the original getEnv
-	originalGetEnv := getEnv
-	defer func() { getEnv = originalGetEnv }()
-
-	// Reset global flag state (Cobra flags persist between tests)
-	varLevel = ""
-
-	// Mock environment to return nothing
-	getEnv = func(key string) string {
-		return ""
+func TestVariableListCmd_NoProjectSpecified(t *testing.T) {
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		getEnvFunc: func(key string) string {
+			return "" // No project in environment
+		},
 	}
 
-	// Execute command without project
-	rootCmd.SetArgs([]string{"variable:list", "--output", "json"})
-	err := rootCmd.Execute()
+	cmd := &VariableListCmd{}
+	err := cmd.Run(ctx)
 	if err == nil {
 		t.Fatal("expected error when no project specified")
 	}

@@ -29,3 +29,6 @@ Thumbs.db
 *.local.md
 *.local.yaml
 *.local.json
+
+# Claude Code dev docs (contain local paths and session notes)
+.claude-docs/

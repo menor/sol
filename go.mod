@@ -1,4 +1,4 @@
-module lab.plat.farm/menor/sol
+module github.com/menor/sol
 
 go 1.25.6
 

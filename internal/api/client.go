@@ -13,7 +13,7 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"lab.plat.farm/menor/sol/internal/auth"
+	"github.com/menor/sol/internal/auth"
 )
 
 const (

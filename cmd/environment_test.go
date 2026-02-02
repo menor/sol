@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"lab.plat.farm/menor/sol/internal/api"
+	"github.com/menor/sol/internal/api"
 )
 
 func TestRunEnvironmentList_Success(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"lab.plat.farm/menor/sol/internal/output"
+	"github.com/menor/sol/internal/output"
 )
 
 // Config holds all CLI configuration extracted from flags, env vars, and config file.

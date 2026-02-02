@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"lab.plat.farm/menor/sol/cmd"
-	"lab.plat.farm/menor/sol/internal/errors"
+	"github.com/menor/sol/cmd"
+	"github.com/menor/sol/internal/errors"
 )
 
 func main() {

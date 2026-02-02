@@ -5,9 +5,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"lab.plat.farm/menor/sol/internal/api"
-	"lab.plat.farm/menor/sol/internal/cli"
-	"lab.plat.farm/menor/sol/internal/errors"
+	"github.com/menor/sol/internal/api"
+	"github.com/menor/sol/internal/cli"
+	"github.com/menor/sol/internal/errors"
 )
 
 func init() {

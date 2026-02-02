@@ -15,7 +15,7 @@ Sol is a minimal CLI that optimizes for code agents first, humans second. It pro
 ## Installation
 
 ```bash
-go install lab.plat.farm/menor/sol@latest
+go install github.com/menor/sol@latest
 ```
 
 ## Usage

@@ -91,6 +91,25 @@ sol variable:set SECRET "value" --project PROJECT_ID --sensitive
 sol variable:delete MY_VAR --project PROJECT_ID
 ```
 
+### Environment Lifecycle
+
+```bash
+# Create a branch environment
+sol environment:branch feature-x --project PROJECT_ID --parent main
+
+# Create and wait for completion
+sol environment:branch feature-x --project PROJECT_ID --wait
+
+# Activate an inactive environment
+sol environment:activate staging --project PROJECT_ID
+
+# Deactivate an environment
+sol environment:deactivate staging --project PROJECT_ID
+
+# Delete an environment (must be deactivated first)
+sol environment:delete old-feature --project PROJECT_ID
+```
+
 ### Deployments
 
 ```bash
@@ -108,21 +127,6 @@ sol redeploy --project PROJECT_ID --environment main
 
 # Redeploy and wait for completion
 sol redeploy --project PROJECT_ID --environment main --wait
-
-# Create a branch environment
-sol environment:branch feature-x --project PROJECT_ID --parent main
-
-# Create and wait for completion
-sol environment:branch feature-x --project PROJECT_ID --wait
-
-# Activate an inactive environment
-sol environment:activate staging --project PROJECT_ID
-
-# Deactivate an environment
-sol environment:deactivate staging --project PROJECT_ID
-
-# Delete an environment (must be deactivated first)
-sol environment:delete old-feature --project PROJECT_ID
 ```
 
 ### Output Formats

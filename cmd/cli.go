@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"sort"
 
 	"github.com/alecthomas/kong"
 	"github.com/menor/sol/internal/output"
@@ -121,12 +123,13 @@ func handleSchemaRequest(args []string) error {
 
 	schema := GetCommandSchema(command)
 	if schema == nil {
-		schema = &CommandSchema{
-			Command:     command,
-			Description: "No schema available for this command",
-			GlobalFlags: globalFlags,
-			ExitCodes:   defaultExitCodes,
+		// Unknown command - return error with available commands
+		var available []string
+		for name := range commandSchemas {
+			available = append(available, name)
 		}
+		sort.Strings(available)
+		return fmt.Errorf("unknown command %q. Available commands: %v", command, available)
 	}
 
 	formatter := output.New(outputFormat)
@@ -152,6 +155,11 @@ func listAllSchemas(outputFormat string) error {
 			Description: schema.Description,
 		})
 	}
+
+	// Sort for deterministic output
+	sort.Slice(summaries, func(i, j int) bool {
+		return summaries[i].Command < summaries[j].Command
+	})
 
 	formatter := output.New(outputFormat)
 	return formatter.Write(summaries)

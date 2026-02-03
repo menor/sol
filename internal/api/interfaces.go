@@ -14,6 +14,11 @@ type ProjectAPI interface {
 type EnvironmentAPI interface {
 	ListEnvironments(ctx context.Context, projectID string) ([]Environment, error)
 	GetEnvironment(ctx context.Context, projectID, environmentID string) (*Environment, error)
+	ActivateEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error)
+	DeactivateEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error)
+	DeleteEnvironment(ctx context.Context, projectID, environmentID string) error
+	RedeployEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error)
+	BranchEnvironment(ctx context.Context, projectID, parentEnvID string, input *BranchInput) (*Activity, error)
 }
 
 // ActivityAPI defines the activity-related API operations.

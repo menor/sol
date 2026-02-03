@@ -14,7 +14,7 @@ import (
 // Global flags are defined here and available to all commands.
 type CLI struct {
 	// Global flags
-	Output      string `help:"Output format" default:"json" enum:"json,toon" short:"o"`
+	Output      string `help:"Output format" default:"toon" enum:"toon,json" short:"o"`
 	Project     string `help:"Project ID" short:"p" env:"UPSUN_PROJECT"`
 	Environment string `help:"Environment name" short:"e" env:"UPSUN_ENVIRONMENT"`
 	Quiet       bool   `help:"Suppress non-essential output" short:"q"`

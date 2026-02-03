@@ -6,11 +6,11 @@ Agent-optimized CLI for Upsun.
 
 Sol is a minimal CLI optimized for AI code agents. It provides:
 
-- **Structured JSON output by default** - Machine-parseable responses
+- **TOON output by default** - Token-efficient format (~50% smaller than JSON)
 - **No interactive prompts** - Flags and stdin only
 - **Predictable exit codes** - 0 success, 1 user error, 2 API error, 3 internal
 - **Machine-readable errors** - Error codes and structured details
-- **TOON output** - Token-efficient format for LLM agents
+- **JSON output** - Use `-o json` when humans need to read it
 
 ## Installation
 
@@ -132,11 +132,11 @@ sol redeploy --project PROJECT_ID --environment main --wait
 ### Output Formats
 
 ```bash
-# JSON (default) - machine-parseable
-sol project:list --output json
+# TOON (default) - token-efficient for LLMs (~50% smaller than JSON)
+sol project:list
 
-# TOON - token-efficient for LLMs (~50% smaller than JSON)
-sol project:list --output toon
+# JSON - use when humans need to read the output
+sol project:list --output json
 ```
 
 ### Command Schema
@@ -158,7 +158,7 @@ sol --schema
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--output` | `-o` | `json` | Output format: json, toon |
+| `--output` | `-o` | `toon` | Output format: toon, json |
 | `--project` | `-p` | | Project ID |
 | `--environment` | `-e` | | Environment name |
 | `--quiet` | `-q` | `false` | Suppress non-essential output |
@@ -175,7 +175,7 @@ default_project: abc123
 default_environment: main
 
 output:
-  format: json
+  format: toon
   color: auto
 
 cache:

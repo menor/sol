@@ -39,10 +39,10 @@ The composable approach is faster (fewer API calls when org details aren't neede
 
 Sol supports two output formats optimized for different use cases:
 
-- **JSON** (default): Universal, machine-parseable format
-- **TOON**: Token-Oriented Object Notation, ~50% fewer tokens than JSON
+- **TOON** (default): Token-Oriented Object Notation, ~50% fewer tokens than JSON
+- **JSON**: Universal, machine-parseable format for human readability
 
-Use `--output toon` when token efficiency matters (e.g., feeding output to LLMs).
+Use `--output json` when humans need to read the output.
 
 ### Command Schema
 

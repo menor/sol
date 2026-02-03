@@ -1,10 +1,10 @@
 # Sol
 
-Agent-first CLI for Upsun.
+Agent-optimized CLI for Upsun.
 
 ## What is Sol?
 
-Sol is a minimal CLI that optimizes for code agents first, humans second. It provides:
+Sol is a minimal CLI optimized for AI code agents. It provides:
 
 - **Structured JSON output by default** - Machine-parseable responses
 - **No interactive prompts** - Flags and stdin only
@@ -89,6 +89,40 @@ sol variable:set SECRET "value" --project PROJECT_ID --sensitive
 
 # Delete a variable
 sol variable:delete MY_VAR --project PROJECT_ID
+```
+
+### Deployments
+
+```bash
+# Push code to Upsun (triggers deployment)
+sol push --project PROJECT_ID
+
+# Push to a specific branch
+sol push --project PROJECT_ID --target staging
+
+# Force push
+sol push --project PROJECT_ID --force
+
+# Redeploy an environment (runs post_deploy hook only)
+sol redeploy --project PROJECT_ID --environment main
+
+# Redeploy and wait for completion
+sol redeploy --project PROJECT_ID --environment main --wait
+
+# Create a branch environment
+sol environment:branch feature-x --project PROJECT_ID --parent main
+
+# Create and wait for completion
+sol environment:branch feature-x --project PROJECT_ID --wait
+
+# Activate an inactive environment
+sol environment:activate staging --project PROJECT_ID
+
+# Deactivate an environment
+sol environment:deactivate staging --project PROJECT_ID
+
+# Delete an environment (must be deactivated first)
+sol environment:delete old-feature --project PROJECT_ID
 ```
 
 ### Output Formats

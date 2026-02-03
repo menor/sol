@@ -32,3 +32,4 @@ Thumbs.db
 
 # Claude Code dev docs (contain local paths and session notes)
 .claude-docs/
+.env

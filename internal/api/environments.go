@@ -56,3 +56,93 @@ func (c *Client) GetEnvironment(ctx context.Context, projectID, environmentID st
 	}
 	return &env, nil
 }
+
+// embeddedActivitiesResponse wraps the API response that contains activities.
+// POST endpoints like activate, deactivate, redeploy return this structure.
+type embeddedActivitiesResponse struct {
+	Status   string `json:"status"`
+	Code     int    `json:"code"`
+	Embedded struct {
+		Activities []Activity `json:"activities"`
+	} `json:"_embedded"`
+}
+
+// BranchInput is the request body for creating a branch.
+type BranchInput struct {
+	Name  string `json:"name"`
+	Title string `json:"title,omitempty"`
+}
+
+// BranchEnvironment creates a new environment by branching from an existing one.
+// Returns the activity triggered by the branch operation.
+func (c *Client) BranchEnvironment(ctx context.Context, projectID, parentEnvID string, input *BranchInput) (*Activity, error) {
+	var resp embeddedActivitiesResponse
+	path := fmt.Sprintf("/projects/%s/environments/%s/branch",
+		url.PathEscape(projectID),
+		url.PathEscape(parentEnvID))
+	if err := c.Post(ctx, path, input, &resp); err != nil {
+		return nil, err
+	}
+	if len(resp.Embedded.Activities) == 0 {
+		return nil, fmt.Errorf("no activity returned")
+	}
+	return &resp.Embedded.Activities[0], nil
+}
+
+// ActivateEnvironment activates an inactive environment.
+// Returns the activity triggered by the activation.
+func (c *Client) ActivateEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error) {
+	var resp embeddedActivitiesResponse
+	path := fmt.Sprintf("/projects/%s/environments/%s/activate",
+		url.PathEscape(projectID),
+		url.PathEscape(environmentID))
+	if err := c.Post(ctx, path, nil, &resp); err != nil {
+		return nil, err
+	}
+	if len(resp.Embedded.Activities) == 0 {
+		return nil, fmt.Errorf("no activity returned")
+	}
+	return &resp.Embedded.Activities[0], nil
+}
+
+// DeactivateEnvironment deactivates an active environment.
+// Returns the activity triggered by the deactivation.
+func (c *Client) DeactivateEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error) {
+	var resp embeddedActivitiesResponse
+	path := fmt.Sprintf("/projects/%s/environments/%s/deactivate",
+		url.PathEscape(projectID),
+		url.PathEscape(environmentID))
+	if err := c.Post(ctx, path, nil, &resp); err != nil {
+		return nil, err
+	}
+	if len(resp.Embedded.Activities) == 0 {
+		return nil, fmt.Errorf("no activity returned")
+	}
+	return &resp.Embedded.Activities[0], nil
+}
+
+// DeleteEnvironment deletes an environment.
+// The environment must be inactive (deactivated) before deletion.
+func (c *Client) DeleteEnvironment(ctx context.Context, projectID, environmentID string) error {
+	path := fmt.Sprintf("/projects/%s/environments/%s",
+		url.PathEscape(projectID),
+		url.PathEscape(environmentID))
+	return c.Delete(ctx, path)
+}
+
+// RedeployEnvironment triggers a redeployment of an environment.
+// This reuses the existing build and only runs the post_deploy hook.
+// Returns the activity triggered by the redeployment.
+func (c *Client) RedeployEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error) {
+	var resp embeddedActivitiesResponse
+	path := fmt.Sprintf("/projects/%s/environments/%s/redeploy",
+		url.PathEscape(projectID),
+		url.PathEscape(environmentID))
+	if err := c.Post(ctx, path, nil, &resp); err != nil {
+		return nil, err
+	}
+	if len(resp.Embedded.Activities) == 0 {
+		return nil, fmt.Errorf("no activity returned")
+	}
+	return &resp.Embedded.Activities[0], nil
+}

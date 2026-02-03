@@ -25,8 +25,14 @@ type CLI struct {
 	AuthInfo        AuthInfoCmd        `cmd:"" name:"auth:info" help:"Show authentication status"`
 	ProjectList     ProjectListCmd     `cmd:"" name:"project:list" aliases:"projects" help:"List all projects"`
 	ProjectInfo     ProjectInfoCmd     `cmd:"" name:"project:info" aliases:"project" help:"Show project details"`
-	EnvironmentList EnvironmentListCmd `cmd:"" name:"environment:list" aliases:"environments,env:list" help:"List environments"`
-	EnvironmentInfo EnvironmentInfoCmd `cmd:"" name:"environment:info" aliases:"env:info" help:"Show environment details"`
+	EnvironmentList       EnvironmentListCmd       `cmd:"" name:"environment:list" aliases:"environments,env:list" help:"List environments"`
+	EnvironmentInfo       EnvironmentInfoCmd       `cmd:"" name:"environment:info" aliases:"env:info" help:"Show environment details"`
+	EnvironmentBranch     EnvironmentBranchCmd     `cmd:"" name:"environment:branch" aliases:"env:branch" help:"Create a new branch environment"`
+	EnvironmentActivate   EnvironmentActivateCmd   `cmd:"" name:"environment:activate" aliases:"env:activate" help:"Activate an environment"`
+	EnvironmentDeactivate EnvironmentDeactivateCmd `cmd:"" name:"environment:deactivate" aliases:"env:deactivate" help:"Deactivate an environment"`
+	EnvironmentDelete     EnvironmentDeleteCmd     `cmd:"" name:"environment:delete" aliases:"env:delete" help:"Delete an environment"`
+	Redeploy              RedeployCmd              `cmd:"" name:"redeploy" help:"Redeploy an environment"`
+	Push                  PushCmd                  `cmd:"" name:"push" help:"Push code to trigger deployment"`
 	ActivityList    ActivityListCmd    `cmd:"" name:"activity:list" aliases:"activities,act:list" help:"List activities"`
 	ActivityLog     ActivityLogCmd     `cmd:"" name:"activity:log" aliases:"act:log" help:"Show activity log"`
 	VariableList    VariableListCmd    `cmd:"" name:"variable:list" aliases:"variables,var:list" help:"List variables"`

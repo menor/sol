@@ -8,10 +8,15 @@
 # Usage:
 #   SMOKE_TEST_PROJECT=your-project-id ./scripts/smoke-test.sh
 #
-# Or set the project ID in your environment and just run:
+# Or create a .env file with SMOKE_TEST_PROJECT and just run:
 #   ./scripts/smoke-test.sh
 
 # Don't use set -e - we want to continue on test failures
+
+# Load .env file if it exists
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -25,6 +30,9 @@ if [ -z "$SMOKE_TEST_PROJECT" ]; then
     echo ""
     echo "Usage:"
     echo "  SMOKE_TEST_PROJECT=your-project-id ./scripts/smoke-test.sh"
+    echo ""
+    echo "Or create a .env file with:"
+    echo "  SMOKE_TEST_PROJECT=your-project-id"
     exit 1
 fi
 PROJECT="$SMOKE_TEST_PROJECT"
@@ -198,6 +206,123 @@ if $SOL variable:get "$TEST_VAR_NAME" --project "$PROJECT" --level project > /de
 else
     pass "variable:delete (verify)"
 fi
+
+# =============================================================================
+section "Deployment Commands"
+# =============================================================================
+
+# Test that deployment commands exist and parse correctly
+if $SOL redeploy --help > /dev/null 2>&1; then
+    pass "redeploy --help"
+else
+    fail "redeploy --help"
+fi
+
+if $SOL environment:activate --help > /dev/null 2>&1; then
+    pass "environment:activate --help"
+else
+    fail "environment:activate --help"
+fi
+
+if $SOL environment:deactivate --help > /dev/null 2>&1; then
+    pass "environment:deactivate --help"
+else
+    fail "environment:deactivate --help"
+fi
+
+if $SOL environment:delete --help > /dev/null 2>&1; then
+    pass "environment:delete --help"
+else
+    fail "environment:delete --help"
+fi
+
+if $SOL push --help > /dev/null 2>&1; then
+    pass "push --help"
+else
+    fail "push --help"
+fi
+
+# Test redeploy on main environment (safe operation)
+if [ -n "$ENV" ]; then
+    echo "Testing redeploy on $ENV (this may take a moment)..."
+    REDEPLOY_OUTPUT=$($SOL redeploy --project "$PROJECT" --environment "$ENV" 2>&1)
+    if echo "$REDEPLOY_OUTPUT" | grep -q '"type": "environment.redeploy"'; then
+        ACTIVITY_ID=$(echo "$REDEPLOY_OUTPUT" | jq -r '.id // empty')
+        pass "redeploy (activity: $ACTIVITY_ID)"
+    else
+        fail "redeploy"
+        echo "  Output: $REDEPLOY_OUTPUT"
+    fi
+else
+    skip "redeploy - no environment found"
+fi
+
+# Test activate/deactivate cycle on a non-main environment
+# Look for smoke-test environment, create if it doesn't exist
+TEST_ENV="smoke-test"
+TEST_ENV_EXISTS=$($SOL environment:list --project "$PROJECT" 2>/dev/null | jq -r --arg env "$TEST_ENV" '[.[] | select(.id == $env)][0].id // empty')
+
+if [ -z "$TEST_ENV_EXISTS" ]; then
+    echo "Creating smoke-test environment (this may take a few minutes)..."
+    if $SOL environment:branch "$TEST_ENV" --project "$PROJECT" --parent main --title "Smoke Test" --wait > /dev/null 2>&1; then
+        pass "environment:branch (created $TEST_ENV)"
+    else
+        fail "environment:branch"
+        skip "environment:activate - branch creation failed"
+        skip "environment:deactivate - branch creation failed"
+        TEST_ENV=""
+    fi
+else
+    pass "environment:branch (smoke-test already exists)"
+fi
+
+if [ -n "$TEST_ENV" ]; then
+    # Get current status
+    ENV_STATUS=$($SOL environment:info "$TEST_ENV" --project "$PROJECT" 2>/dev/null | jq -r '.status // empty')
+
+    if [ "$ENV_STATUS" = "active" ]; then
+        # Deactivate first, then activate
+        echo "Testing deactivate on $TEST_ENV..."
+        if $SOL environment:deactivate "$TEST_ENV" --project "$PROJECT" --wait > /dev/null 2>&1; then
+            pass "environment:deactivate ($TEST_ENV)"
+
+            echo "Testing activate on $TEST_ENV..."
+            if $SOL environment:activate "$TEST_ENV" --project "$PROJECT" --wait > /dev/null 2>&1; then
+                pass "environment:activate ($TEST_ENV)"
+            else
+                fail "environment:activate ($TEST_ENV)"
+            fi
+        else
+            fail "environment:deactivate ($TEST_ENV)"
+            skip "environment:activate - deactivate failed"
+        fi
+    elif [ "$ENV_STATUS" = "inactive" ]; then
+        # Activate first, then deactivate
+        echo "Testing activate on $TEST_ENV..."
+        if $SOL environment:activate "$TEST_ENV" --project "$PROJECT" --wait > /dev/null 2>&1; then
+            pass "environment:activate ($TEST_ENV)"
+
+            echo "Testing deactivate on $TEST_ENV..."
+            if $SOL environment:deactivate "$TEST_ENV" --project "$PROJECT" --wait > /dev/null 2>&1; then
+                pass "environment:deactivate ($TEST_ENV)"
+            else
+                fail "environment:deactivate ($TEST_ENV)"
+            fi
+        else
+            fail "environment:activate ($TEST_ENV)"
+            skip "environment:deactivate - activate failed"
+        fi
+    else
+        skip "environment:activate/deactivate - environment status: $ENV_STATUS"
+    fi
+else
+    skip "environment:activate - no non-production environment found"
+    skip "environment:deactivate - no non-production environment found"
+fi
+
+# Skip destructive/complex tests
+skip "environment:delete (not tested - destructive)"
+skip "push (not tested - requires git repo setup)"
 
 # =============================================================================
 section "Results"

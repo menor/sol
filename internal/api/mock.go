@@ -10,8 +10,13 @@ type MockClient struct {
 	GetProjectFunc   func(ctx context.Context, projectID string) (*Project, error)
 
 	// Environment methods
-	ListEnvironmentsFunc func(ctx context.Context, projectID string) ([]Environment, error)
-	GetEnvironmentFunc   func(ctx context.Context, projectID, environmentID string) (*Environment, error)
+	ListEnvironmentsFunc       func(ctx context.Context, projectID string) ([]Environment, error)
+	GetEnvironmentFunc         func(ctx context.Context, projectID, environmentID string) (*Environment, error)
+	ActivateEnvironmentFunc    func(ctx context.Context, projectID, environmentID string) (*Activity, error)
+	DeactivateEnvironmentFunc  func(ctx context.Context, projectID, environmentID string) (*Activity, error)
+	DeleteEnvironmentFunc      func(ctx context.Context, projectID, environmentID string) error
+	RedeployEnvironmentFunc    func(ctx context.Context, projectID, environmentID string) (*Activity, error)
+	BranchEnvironmentFunc      func(ctx context.Context, projectID, parentEnvID string, input *BranchInput) (*Activity, error)
 
 	// Activity methods
 	ListActivitiesFunc func(ctx context.Context, projectID string, opts *ListActivitiesOptions) ([]Activity, error)
@@ -72,6 +77,51 @@ func (m *MockClient) GetEnvironment(ctx context.Context, projectID, environmentI
 	m.Calls = append(m.Calls, MockCall{Method: "GetEnvironment", Args: []any{projectID, environmentID}})
 	if m.GetEnvironmentFunc != nil {
 		return m.GetEnvironmentFunc(ctx, projectID, environmentID)
+	}
+	return nil, nil
+}
+
+// ActivateEnvironment implements EnvironmentAPI.
+func (m *MockClient) ActivateEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ActivateEnvironment", Args: []any{projectID, environmentID}})
+	if m.ActivateEnvironmentFunc != nil {
+		return m.ActivateEnvironmentFunc(ctx, projectID, environmentID)
+	}
+	return nil, nil
+}
+
+// DeactivateEnvironment implements EnvironmentAPI.
+func (m *MockClient) DeactivateEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "DeactivateEnvironment", Args: []any{projectID, environmentID}})
+	if m.DeactivateEnvironmentFunc != nil {
+		return m.DeactivateEnvironmentFunc(ctx, projectID, environmentID)
+	}
+	return nil, nil
+}
+
+// DeleteEnvironment implements EnvironmentAPI.
+func (m *MockClient) DeleteEnvironment(ctx context.Context, projectID, environmentID string) error {
+	m.Calls = append(m.Calls, MockCall{Method: "DeleteEnvironment", Args: []any{projectID, environmentID}})
+	if m.DeleteEnvironmentFunc != nil {
+		return m.DeleteEnvironmentFunc(ctx, projectID, environmentID)
+	}
+	return nil
+}
+
+// RedeployEnvironment implements EnvironmentAPI.
+func (m *MockClient) RedeployEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "RedeployEnvironment", Args: []any{projectID, environmentID}})
+	if m.RedeployEnvironmentFunc != nil {
+		return m.RedeployEnvironmentFunc(ctx, projectID, environmentID)
+	}
+	return nil, nil
+}
+
+// BranchEnvironment implements EnvironmentAPI.
+func (m *MockClient) BranchEnvironment(ctx context.Context, projectID, parentEnvID string, input *BranchInput) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "BranchEnvironment", Args: []any{projectID, parentEnvID, input}})
+	if m.BranchEnvironmentFunc != nil {
+		return m.BranchEnvironmentFunc(ctx, projectID, parentEnvID, input)
 	}
 	return nil, nil
 }

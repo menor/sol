@@ -222,4 +222,4 @@ Sol means "sun" in Catalan, Spanish, and Latin. It connects to Upsun and represe
 
 ## License
 
-Proprietary - Platform.sh
+Copyright (c) 2026 Jose Menor. All rights reserved.

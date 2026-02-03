@@ -94,6 +94,70 @@ func TestTextFormatterWriteError(t *testing.T) {
 	}
 }
 
+func TestTOONFormatterWrite(t *testing.T) {
+	var buf bytes.Buffer
+	f := NewTOONFormatter(&buf)
+
+	// Test with a simple struct
+	type Project struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	data := Project{ID: "abc123", Name: "my-app"}
+	if err := f.Write(data); err != nil {
+		t.Fatalf("Write() error = %v", err)
+	}
+
+	output := buf.String()
+	// TOON output should be more compact than JSON
+	// and should not have JSON braces
+	if strings.HasPrefix(output, "{") {
+		t.Errorf("TOON output should not start with JSON brace, got: %s", output)
+	}
+	// Should contain the field values
+	if !strings.Contains(output, "abc123") || !strings.Contains(output, "my-app") {
+		t.Errorf("TOON output should contain field values, got: %s", output)
+	}
+}
+
+func TestTOONFormatterWriteArray(t *testing.T) {
+	var buf bytes.Buffer
+	f := NewTOONFormatter(&buf)
+
+	// Test with array of structs - the key TOON use case
+	type Project struct {
+		ID     string `json:"id"`
+		Name   string `json:"name"`
+		Region string `json:"region"`
+	}
+	data := []Project{
+		{ID: "abc123", Name: "my-app", Region: "us-east"},
+		{ID: "def456", Name: "api-service", Region: "eu-west"},
+	}
+	if err := f.Write(data); err != nil {
+		t.Fatalf("Write() error = %v", err)
+	}
+
+	output := buf.String()
+	// TOON arrays use format: [count]{fields}:
+	// Example: [2]{ID,Name,Region}:
+	if !strings.Contains(output, "[2]") {
+		t.Errorf("TOON output should contain array count [2], got: %s", output)
+	}
+	// Should contain field schema
+	if !strings.Contains(output, "ID") || !strings.Contains(output, "Name") || !strings.Contains(output, "Region") {
+		t.Errorf("TOON output should contain field names, got: %s", output)
+	}
+	// Should contain all values
+	if !strings.Contains(output, "abc123") || !strings.Contains(output, "def456") {
+		t.Errorf("TOON output should contain all IDs, got: %s", output)
+	}
+	// Should NOT contain JSON syntax
+	if strings.Contains(output, `"id"`) || strings.Contains(output, `"name"`) {
+		t.Errorf("TOON output should not contain JSON quoted keys, got: %s", output)
+	}
+}
+
 func TestTOONFormatterWriteError(t *testing.T) {
 	var buf bytes.Buffer
 	f := NewTOONFormatter(&buf)

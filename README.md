@@ -135,23 +135,36 @@ sol redeploy --project PROJECT_ID --environment main --wait
 # JSON (default) - machine-parseable
 sol project:list --output json
 
-# TOON - token-efficient for LLMs (coming soon)
+# TOON - token-efficient for LLMs (~50% smaller than JSON)
 sol project:list --output toon
+```
 
-# Text - human-readable (coming soon)
-sol project:list --output text
+### Command Schema
+
+Get machine-readable documentation for any command:
+
+```bash
+# Get schema for a specific command
+sol project:list --schema
+
+# Get schema in TOON format
+sol variable:set --schema --output toon
+
+# List all available commands
+sol --schema
 ```
 
 ## Global Flags
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--output` | `-o` | `json` | Output format: json, toon, text |
+| `--output` | `-o` | `json` | Output format: json, toon |
 | `--project` | `-p` | | Project ID |
 | `--environment` | `-e` | | Environment name |
 | `--quiet` | `-q` | `false` | Suppress non-essential output |
 | `--no-cache` | | `false` | Bypass cache for this request |
 | `--debug` | | `false` | Show API request/response details |
+| `--schema` | | `false` | Output command schema instead of running |
 
 ## Configuration
 

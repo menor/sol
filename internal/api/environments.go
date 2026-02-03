@@ -84,7 +84,7 @@ func (c *Client) BranchEnvironment(ctx context.Context, projectID, parentEnvID s
 		return nil, err
 	}
 	if len(resp.Embedded.Activities) == 0 {
-		return nil, fmt.Errorf("no activity returned")
+		return nil, &APIError{Message: "no activity returned from API"}
 	}
 	return &resp.Embedded.Activities[0], nil
 }
@@ -100,7 +100,7 @@ func (c *Client) ActivateEnvironment(ctx context.Context, projectID, environment
 		return nil, err
 	}
 	if len(resp.Embedded.Activities) == 0 {
-		return nil, fmt.Errorf("no activity returned")
+		return nil, &APIError{Message: "no activity returned from API"}
 	}
 	return &resp.Embedded.Activities[0], nil
 }
@@ -116,7 +116,7 @@ func (c *Client) DeactivateEnvironment(ctx context.Context, projectID, environme
 		return nil, err
 	}
 	if len(resp.Embedded.Activities) == 0 {
-		return nil, fmt.Errorf("no activity returned")
+		return nil, &APIError{Message: "no activity returned from API"}
 	}
 	return &resp.Embedded.Activities[0], nil
 }
@@ -142,7 +142,7 @@ func (c *Client) RedeployEnvironment(ctx context.Context, projectID, environment
 		return nil, err
 	}
 	if len(resp.Embedded.Activities) == 0 {
-		return nil, fmt.Errorf("no activity returned")
+		return nil, &APIError{Message: "no activity returned from API"}
 	}
 	return &resp.Embedded.Activities[0], nil
 }

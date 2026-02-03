@@ -11,7 +11,6 @@ import (
 type PushCmd struct {
 	Target string `help:"Target branch (defaults to current branch)" short:"t"`
 	Force  bool   `help:"Force push" short:"f"`
-	Wait   bool   `help:"Wait for the activity to complete" short:"w"`
 }
 
 // Run executes the push command.
@@ -61,7 +60,13 @@ func (c *PushCmd) Run(ctx *Context) error {
 
 // execGit runs a git command.
 func execGit(ctx *Context, args ...string) error {
-	cmd := exec.CommandContext(ctx, "git", args...)
+	gitPath, err := exec.LookPath("git")
+	if err != nil {
+		return errors.NewValidationError("git not found").
+			WithHint("Install git to use push command")
+	}
+
+	cmd := exec.CommandContext(ctx, gitPath, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

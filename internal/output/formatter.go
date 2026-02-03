@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+
+	toon "github.com/toon-format/toon-go"
 )
 
 // Format represents an output format
@@ -83,10 +85,21 @@ func NewTOONFormatter(w io.Writer) *TOONFormatter {
 }
 
 func (f *TOONFormatter) Write(v any) error {
-	// TODO: implement TOON encoding
-	// For now, fall back to compact JSON
-	encoder := json.NewEncoder(f.writer)
-	return encoder.Encode(v)
+	data, err := toon.Marshal(v)
+	if err != nil {
+		// Fall back to compact JSON if TOON encoding fails
+		encoder := json.NewEncoder(f.writer)
+		return encoder.Encode(v)
+	}
+	_, err = f.writer.Write(data)
+	if err != nil {
+		return err
+	}
+	// Add newline if not present
+	if len(data) > 0 && data[len(data)-1] != '\n' {
+		_, err = f.writer.Write([]byte("\n"))
+	}
+	return err
 }
 
 func (f *TOONFormatter) WriteError(err error) error {

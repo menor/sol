@@ -35,6 +35,27 @@ sol project:list         # Agent filters by organization_id
 
 The composable approach is faster (fewer API calls when org details aren't needed) and more flexible (agent decides what data to fetch based on actual user intent).
 
+### Output Formats
+
+Sol supports two output formats optimized for different use cases:
+
+- **JSON** (default): Universal, machine-parseable format
+- **TOON**: Token-Oriented Object Notation, ~50% fewer tokens than JSON
+
+Use `--output toon` when token efficiency matters (e.g., feeding output to LLMs).
+
+### Command Schema
+
+The `--schema` flag outputs machine-readable documentation for any command:
+
+```bash
+sol project:list --schema          # Schema for project:list
+sol variable:set --schema          # Works even for commands with required args
+sol --schema                       # List all available commands
+```
+
+This enables agents to discover command capabilities programmatically.
+
 ## Upsun Documentation
 
 When you need Upsun documentation, search these sites:

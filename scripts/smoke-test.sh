@@ -94,6 +94,38 @@ else
 fi
 
 # =============================================================================
+section "Output Formats"
+# =============================================================================
+
+# Test TOON output
+if $SOL project:list --output toon 2>/dev/null | head -1 | grep -q '^\['; then
+    pass "project:list --output toon"
+else
+    fail "project:list --output toon"
+fi
+
+# Test schema flag
+if $SOL project:list --schema | grep -q '"command": "project:list"'; then
+    pass "project:list --schema"
+else
+    fail "project:list --schema"
+fi
+
+# Test schema in TOON format
+if $SOL variable:set --schema --output toon | grep -q 'Command:'; then
+    pass "variable:set --schema --output toon"
+else
+    fail "variable:set --schema --output toon"
+fi
+
+# Test list all schemas
+if $SOL --schema | grep -q '"command":'; then
+    pass "sol --schema (list all)"
+else
+    fail "sol --schema (list all)"
+fi
+
+# =============================================================================
 section "Projects"
 # =============================================================================
 

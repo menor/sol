@@ -163,7 +163,7 @@ func TestEnvironmentDeleteCmd_Success(t *testing.T) {
 		},
 	}
 
-	cmd := &EnvironmentDeleteCmd{EnvironmentID: "old-feature", Yes: true}
+	cmd := &EnvironmentDeleteCmd{EnvironmentID: "old-feature"}
 	err := cmd.Run(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -203,7 +203,7 @@ func TestEnvironmentDeleteCmd_APIError(t *testing.T) {
 		},
 	}
 
-	cmd := &EnvironmentDeleteCmd{EnvironmentID: "active-env", Yes: true}
+	cmd := &EnvironmentDeleteCmd{EnvironmentID: "active-env"}
 	err := cmd.Run(ctx)
 	if err == nil {
 		t.Fatal("expected error when environment is still active")

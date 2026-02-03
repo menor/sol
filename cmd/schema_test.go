@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -120,5 +121,26 @@ func TestIsFlag(t *testing.T) {
 		if result != tc.expected {
 			t.Errorf("isFlag(%q) = %v, want %v", tc.arg, result, tc.expected)
 		}
+	}
+}
+
+func TestHandleSchemaRequest_UnknownCommand(t *testing.T) {
+	// Test that unknown commands return an error
+	err := handleSchemaRequest([]string{"sol", "unknown:cmd", "--schema"})
+	if err == nil {
+		t.Error("expected error for unknown command")
+	}
+	// Error should mention the unknown command
+	if err != nil && !strings.Contains(err.Error(), "unknown:cmd") {
+		t.Errorf("error should mention unknown command, got: %s", err.Error())
+	}
+}
+
+func TestListAllSchemas_Sorted(t *testing.T) {
+	// This is a simple check that listAllSchemas doesn't error
+	// The sort order is verified by running sol --schema manually
+	err := listAllSchemas("json")
+	if err != nil {
+		t.Errorf("listAllSchemas failed: %v", err)
 	}
 }

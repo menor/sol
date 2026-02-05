@@ -12,6 +12,7 @@ type ActivityListCmd struct {
 	Limit int    `help:"Maximum number of activities to return" default:"10"`
 	Type  string `help:"Filter by activity type"`
 	State string `help:"Filter by state (pending, in_progress, complete)"`
+	Full  bool   `help:"Include all fields (result, description, timestamps, etc.)" short:"f"`
 }
 
 // Run executes the activity:list command.
@@ -39,7 +40,18 @@ func (c *ActivityListCmd) Run(ctx *Context) error {
 		return handleAPIError(err, "project", projectID)
 	}
 
-	return ctx.Output(activities)
+	// Default: return lean summary (ID, Type, State, CreatedAt only)
+	// --full: return all fields
+	if c.Full {
+		return ctx.Output(activities)
+	}
+
+	// Convert to lean summaries
+	summaries := make([]api.ActivitySummary, len(activities))
+	for i, a := range activities {
+		summaries[i] = a.ToSummary()
+	}
+	return ctx.Output(summaries)
 }
 
 // ActivityLogCmd shows activity log output.

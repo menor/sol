@@ -85,7 +85,8 @@ func NewTOONFormatter(w io.Writer) *TOONFormatter {
 }
 
 func (f *TOONFormatter) Write(v any) error {
-	data, err := toon.Marshal(v)
+	// toon-go panics on nil pointer types, so we need to recover
+	data, err := f.marshalWithRecover(v)
 	if err != nil {
 		// Fall back to compact JSON if TOON encoding fails
 		encoder := json.NewEncoder(f.writer)
@@ -100,6 +101,26 @@ func (f *TOONFormatter) Write(v any) error {
 		_, err = f.writer.Write([]byte("\n"))
 	}
 	return err
+}
+
+// marshalWithRecover calls toon.Marshal with panic recovery.
+// toon-go panics on nil pointer types (e.g., *time.Time), so we catch and return an error.
+func (f *TOONFormatter) marshalWithRecover(v any) (data []byte, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = &toonPanicError{recovered: r}
+		}
+	}()
+	return toon.Marshal(v)
+}
+
+// toonPanicError wraps a recovered panic as an error.
+type toonPanicError struct {
+	recovered any
+}
+
+func (e *toonPanicError) Error() string {
+	return "toon encoding panic"
 }
 
 func (f *TOONFormatter) WriteError(err error) error {

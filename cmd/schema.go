@@ -161,6 +161,9 @@ var commandSchemas = map[string]CommandSchema{
 	"environment:list": {
 		Command:     "environment:list",
 		Description: "List environments for a project",
+		Flags: []FlagSchema{
+			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (type, machine_name, timestamps, etc.)"},
+		},
 		GlobalFlags: globalFlags,
 		Output: &OutputSchema{
 			Type: "array",
@@ -169,14 +172,12 @@ var commandSchemas = map[string]CommandSchema{
 				Properties: map[string]PropertySchema{
 					"id":     {Type: "string", Description: "Environment ID"},
 					"name":   {Type: "string", Description: "Environment name"},
-					"title":  {Type: "string", Description: "Environment title"},
-					"type":   {Type: "string", Description: "Environment type"},
 					"status": {Type: "string", Description: "Environment status"},
 					"parent": {Type: "string", Description: "Parent environment ID"},
 				},
 			},
 		},
-		Examples:  []string{"sol environment:list --project abc123"},
+		Examples:  []string{"sol environment:list --project abc123", "sol environment:list -p abc123 --full"},
 		ExitCodes: defaultExitCodes,
 	},
 	"environment:info": {
@@ -286,6 +287,7 @@ var commandSchemas = map[string]CommandSchema{
 			{Name: "limit", Type: "integer", Description: "Maximum number of activities to return", Default: 10},
 			{Name: "state", Type: "string", Description: "Filter by state (pending, in_progress, complete)"},
 			{Name: "type", Type: "string", Description: "Filter by activity type"},
+			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (result, description, timestamps, etc.)"},
 		},
 		GlobalFlags: globalFlags,
 		Output: &OutputSchema{
@@ -293,16 +295,14 @@ var commandSchemas = map[string]CommandSchema{
 			Items: &OutputSchema{
 				Type: "object",
 				Properties: map[string]PropertySchema{
-					"id":          {Type: "string", Description: "Activity ID"},
-					"type":        {Type: "string", Description: "Activity type"},
-					"state":       {Type: "string", Description: "Activity state"},
-					"result":      {Type: "string", Description: "Activity result"},
-					"description": {Type: "string", Description: "Activity description"},
-					"created_at":  {Type: "string", Description: "Creation timestamp"},
+					"id":         {Type: "string", Description: "Activity ID"},
+					"type":       {Type: "string", Description: "Activity type"},
+					"state":      {Type: "string", Description: "Activity state"},
+					"created_at": {Type: "string", Description: "Creation timestamp"},
 				},
 			},
 		},
-		Examples:  []string{"sol activity:list --project abc123", "sol activity:list --project abc123 --state complete --limit 5"},
+		Examples:  []string{"sol activity:list --project abc123", "sol activity:list -p abc123 --state failed --limit 5"},
 		ExitCodes: defaultExitCodes,
 	},
 	"activity:log": {

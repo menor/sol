@@ -6,7 +6,9 @@ import (
 )
 
 // EnvironmentListCmd lists all environments in a project.
-type EnvironmentListCmd struct{}
+type EnvironmentListCmd struct {
+	Full bool `help:"Include all fields (type, machine_name, timestamps, etc.)" short:"f"`
+}
 
 // Run executes the environment:list command.
 func (c *EnvironmentListCmd) Run(ctx *Context) error {
@@ -25,7 +27,18 @@ func (c *EnvironmentListCmd) Run(ctx *Context) error {
 		return handleAPIError(err, "project", projectID)
 	}
 
-	return ctx.Output(environments)
+	// Default: return lean summary (ID, Name, Status, Parent only)
+	// --full: return all fields
+	if c.Full {
+		return ctx.Output(environments)
+	}
+
+	// Convert to lean summaries
+	summaries := make([]api.EnvironmentSummary, len(environments))
+	for i, e := range environments {
+		summaries[i] = e.ToSummary()
+	}
+	return ctx.Output(summaries)
 }
 
 // EnvironmentInfoCmd shows environment details.

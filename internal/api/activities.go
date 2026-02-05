@@ -23,6 +23,25 @@ type Activity struct {
 	Links       HALLinks  `json:"_links"`
 }
 
+// ActivitySummary is a minimal activity representation for list operations.
+// Contains essential fields for identifying activities and their status.
+type ActivitySummary struct {
+	ID        string    `json:"id"`
+	Type      string    `json:"type"`
+	State     string    `json:"state"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// ToSummary converts an Activity to a lean ActivitySummary.
+func (a *Activity) ToSummary() ActivitySummary {
+	return ActivitySummary{
+		ID:        a.ID,
+		Type:      a.Type,
+		State:     a.State,
+		CreatedAt: a.CreatedAt,
+	}
+}
+
 // ActivityLog represents a log entry from an activity.
 type ActivityLog struct {
 	ID        string    `json:"id"`

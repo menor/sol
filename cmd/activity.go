@@ -9,10 +9,11 @@ import (
 
 // ActivityListCmd lists project activities.
 type ActivityListCmd struct {
-	Limit int    `help:"Maximum number of activities to return" default:"10"`
-	Type  string `help:"Filter by activity type"`
-	State string `help:"Filter by state (pending, in_progress, complete)"`
-	Full  bool   `help:"Include all fields (result, description, timestamps, etc.)" short:"f"`
+	Limit  int    `help:"Maximum number of activities to return" default:"10"`
+	Type   string `help:"Filter by activity type"`
+	State  string `help:"Filter by state (pending, in_progress, complete)"`
+	Result string `help:"Filter by result (success, failure)"`
+	Full   bool   `help:"Include all fields (result, description, timestamps, etc.)" short:"f"`
 }
 
 // Run executes the activity:list command.
@@ -32,6 +33,7 @@ func (c *ActivityListCmd) Run(ctx *Context) error {
 		Limit:       c.Limit,
 		Type:        c.Type,
 		State:       c.State,
+		Result:      c.Result,
 		Environment: ctx.CLI.Environment,
 	}
 

@@ -54,6 +54,7 @@ type ListActivitiesOptions struct {
 	Environment string // Filter by environment
 	Type        string // Filter by activity type
 	State       string // Filter by state (pending, in_progress, complete)
+	Result      string // Filter by result (success, failure)
 	Limit       int    // Maximum number of results
 }
 
@@ -72,6 +73,9 @@ func (c *Client) ListActivities(ctx context.Context, projectID string, opts *Lis
 		}
 		if opts.State != "" {
 			query.Set("state", opts.State)
+		}
+		if opts.Result != "" {
+			query.Set("result", opts.Result)
 		}
 	}
 

@@ -286,6 +286,7 @@ var commandSchemas = map[string]CommandSchema{
 		Flags: []FlagSchema{
 			{Name: "limit", Type: "integer", Description: "Maximum number of activities to return", Default: 10},
 			{Name: "state", Type: "string", Description: "Filter by state (pending, in_progress, complete)"},
+			{Name: "result", Type: "string", Description: "Filter by result (success, failure)"},
 			{Name: "type", Type: "string", Description: "Filter by activity type"},
 			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (result, description, timestamps, etc.)"},
 		},
@@ -302,7 +303,7 @@ var commandSchemas = map[string]CommandSchema{
 				},
 			},
 		},
-		Examples:  []string{"sol activity:list --project abc123", "sol activity:list -p abc123 --state failed --limit 5"},
+		Examples:  []string{"sol activity:list --project abc123", "sol activity:list -p abc123 --result failure --limit 5"},
 		ExitCodes: defaultExitCodes,
 	},
 	"activity:log": {

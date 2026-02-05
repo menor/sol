@@ -1,5 +1,6 @@
 # Binaries
 sol
+dist/
 *.exe
 *.exe~
 *.dll

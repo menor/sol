@@ -58,6 +58,23 @@ type ProjectRef struct {
 	UpdatedAt      time.Time `json:"updated_at"`
 }
 
+// ProjectSummary is a minimal project representation for list operations.
+// Contains only the essential fields needed to identify and select a project.
+type ProjectSummary struct {
+	ID     string `json:"id"`
+	Title  string `json:"title"`
+	Region string `json:"region"`
+}
+
+// ToSummary converts a ProjectRef to a lean ProjectSummary.
+func (p *ProjectRef) ToSummary() ProjectSummary {
+	return ProjectSummary{
+		ID:     p.ID,
+		Title:  p.Title,
+		Region: p.Region,
+	}
+}
+
 // ExtendedAccessItem represents a single access entry from the extended-access API.
 // This is what the /users/{id}/extended-access endpoint actually returns.
 type ExtendedAccessItem struct {

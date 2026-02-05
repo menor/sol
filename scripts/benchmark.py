@@ -1,8 +1,22 @@
 #!/usr/bin/env python3
-"""Benchmark sol vs upsun CLI output sizes and token counts."""
+"""Benchmark sol vs upsun CLI output sizes and token counts.
 
+Usage:
+    pipx run --spec tiktoken python3 scripts/benchmark.py --project PROJECT_ID
+
+Or set PLATFORM_PROJECT environment variable:
+    export PLATFORM_PROJECT=your-project-id
+    pipx run --spec tiktoken python3 scripts/benchmark.py
+"""
+
+import argparse
+import os
 import subprocess
 import sys
+
+# Determine script and sol binary paths
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SOL_BIN = os.path.join(SCRIPT_DIR, '..', 'sol')
 
 # Try to import tiktoken
 try:
@@ -15,6 +29,22 @@ except ImportError:
     HAS_TIKTOKEN = False
     def count_tokens(text):
         return len(text) // 4
+
+def check_prereqs():
+    """Check for required tools and warn if missing."""
+    warnings = []
+
+    if subprocess.run("which upsun", shell=True, capture_output=True).returncode != 0:
+        warnings.append("upsun CLI not found - upsun benchmarks will show N/A")
+
+    if not os.path.exists(SOL_BIN):
+        warnings.append(f"sol binary not found at {SOL_BIN} - run 'go build -o sol .' first")
+
+    if warnings:
+        print("\n  Warnings:")
+        for w in warnings:
+            print(f"    - {w}")
+        print()
 
 def run_command(cmd):
     """Run command and return output."""
@@ -78,7 +108,20 @@ def benchmark(name, commands, baseline_label=None):
     return results
 
 def main():
-    PROJECT_ID = "aua7v2333xvh2"  # Console project with 461 environments
+    parser = argparse.ArgumentParser(
+        description='Benchmark sol vs upsun CLI token efficiency',
+        epilog='Requires tiktoken for accurate token counts. Install via: pip install tiktoken'
+    )
+    parser.add_argument('--project', '-p',
+                        help='Project ID for environment and activity benchmarks')
+    args = parser.parse_args()
+
+    # Get project ID from args or environment
+    project_id = args.project or os.environ.get('PLATFORM_PROJECT')
+    if not project_id:
+        print("Error: No project specified.")
+        print("Use --project PROJECT_ID or set PLATFORM_PROJECT environment variable.")
+        sys.exit(1)
 
     print("\n" + "="*70)
     print("  SOL vs UPSUN CLI - TOKEN EFFICIENCY BENCHMARK")
@@ -86,40 +129,41 @@ def main():
     if HAS_TIKTOKEN:
         print("  Token counting: tiktoken (cl100k_base, same as GPT-4/Claude)")
     else:
-        print("  Token counting: estimate (chars/4)")
-    print(f"  Test project: Console ({PROJECT_ID}) - 461 environments")
+        print("  Token counting: estimate (chars/4) - install tiktoken for accuracy")
+    print(f"  Test project: {project_id}")
+
+    check_prereqs()
 
     # Benchmark 1: Project list
-    benchmark("PROJECT LIST (68 projects)", [
+    project_results = benchmark("PROJECT LIST", [
         ("upsun --format=plain", "upsun project:list --format=plain --count=100 2>/dev/null", "No"),
-        ("sol json (all fields)", "./sol project:list -o json --full 2>/dev/null", "Yes"),
-        ("sol json (lean)", "./sol project:list -o json 2>/dev/null", "Yes"),
-        ("sol toon (lean) ★", "./sol project:list 2>/dev/null", "Yes"),
+        ("sol json (all fields)", f"{SOL_BIN} project:list -o json --full 2>/dev/null", "Yes"),
+        ("sol json (lean)", f"{SOL_BIN} project:list -o json 2>/dev/null", "Yes"),
+        ("sol toon (lean)", f"{SOL_BIN} project:list 2>/dev/null", "Yes"),
     ], baseline_label="upsun --format=plain")
 
     # Benchmark 2: Environment list (big dataset)
-    benchmark("ENVIRONMENT LIST (461 environments)", [
-        ("upsun --format=plain", f"upsun environment:list -p {PROJECT_ID} --format=plain 2>/dev/null", "No"),
-        ("sol json (all fields)", f"./sol environment:list -p {PROJECT_ID} -o json --full 2>/dev/null", "Yes"),
-        ("sol json (lean)", f"./sol environment:list -p {PROJECT_ID} -o json 2>/dev/null", "Yes"),
-        ("sol toon (lean) ★", f"./sol environment:list -p {PROJECT_ID} 2>/dev/null", "Yes"),
+    env_results = benchmark("ENVIRONMENT LIST", [
+        ("upsun --format=plain", f"upsun environment:list -p {project_id} --format=plain 2>/dev/null", "No"),
+        ("sol json (all fields)", f"{SOL_BIN} environment:list -p {project_id} -o json --full 2>/dev/null", "Yes"),
+        ("sol json (lean)", f"{SOL_BIN} environment:list -p {project_id} -o json 2>/dev/null", "Yes"),
+        ("sol toon (lean)", f"{SOL_BIN} environment:list -p {project_id} 2>/dev/null", "Yes"),
     ], baseline_label="upsun --format=plain")
 
     # Benchmark 3: Activity list
-    benchmark("ACTIVITY LIST (50 activities)", [
-        ("upsun --format=plain", f"upsun activity:list -p {PROJECT_ID} --limit 50 --format=plain 2>/dev/null", "No"),
-        ("sol json (all fields)", f"./sol activity:list -p {PROJECT_ID} --limit 50 -o json --full 2>/dev/null", "Yes"),
-        ("sol json (lean)", f"./sol activity:list -p {PROJECT_ID} --limit 50 -o json 2>/dev/null", "Yes"),
-        ("sol toon (lean) ★", f"./sol activity:list -p {PROJECT_ID} --limit 50 2>/dev/null", "Yes"),
+    activity_results = benchmark("ACTIVITY LIST (50 activities)", [
+        ("upsun --format=plain", f"upsun activity:list -p {project_id} --limit 50 --format=plain 2>/dev/null", "No"),
+        ("sol json (all fields)", f"{SOL_BIN} activity:list -p {project_id} --limit 50 -o json --full 2>/dev/null", "Yes"),
+        ("sol json (lean)", f"{SOL_BIN} activity:list -p {project_id} --limit 50 -o json 2>/dev/null", "Yes"),
+        ("sol toon (lean)", f"{SOL_BIN} activity:list -p {project_id} --limit 50 2>/dev/null", "Yes"),
     ], baseline_label="sol json (all fields)")
 
-    # Summary
+    # Summary - qualitative findings only, no hardcoded numbers
     print("\n" + "="*70)
     print("  KEY FINDINGS")
     print("="*70)
     print("""
   1. STRUCTURED vs UNSTRUCTURED
-     ─────────────────────────────────────────────────────────────────
      upsun CLI outputs plain text tables - compact but NOT parseable.
      Sol outputs JSON/TOON - directly parseable by agents.
 
@@ -127,27 +171,18 @@ def main():
      Sol's structured output eliminates parsing errors.
 
   2. SOL LEAN OUTPUT vs VERBOSE JSON
-     ─────────────────────────────────────────────────────────────────
-     When you need structured data, sol's defaults are optimized:
+     When you need structured data, sol's lean defaults are optimized.
+     Lean output includes only essential fields (id, name, status, etc.)
+     vs full JSON which includes all API fields.
 
-     │ Command             │ JSON (full)  │ TOON (lean)  │ Savings  │
-     ├─────────────────────┼──────────────┼──────────────┼──────────┤
-     │ project:list (68)   │    8,929 tok │    1,654 tok │   81%    │
-     │ environment:list    │  626,572 tok │   12,952 tok │   98%    │
-     │ activity:list (50)  │   10,114 tok │      846 tok │   92%    │
+     Use --full flag when you need all fields.
 
   3. SOL vs UPSUN (same data, different format)
-     ─────────────────────────────────────────────────────────────────
      Sol's lean TOON output uses similar tokens as upsun's plain text,
      but Sol's output is STRUCTURED and PARSEABLE.
 
-     │ Command             │ upsun plain  │ sol toon     │ Diff     │
-     ├─────────────────────┼──────────────┼──────────────┼──────────┤
-     │ project:list (68)   │    1,942 tok │    1,654 tok │  -15%    │
-     │ environment:list    │   12,684 tok │   12,952 tok │   +2%    │
-
   BOTTOM LINE: Sol gives agents structured data at roughly the same
-  token cost as upsun's unparseable plain text, with 81-98% savings
+  token cost as upsun's unparseable plain text, with significant savings
   vs verbose JSON when you need all fields.
 """)
 

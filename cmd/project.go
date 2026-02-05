@@ -6,7 +6,9 @@ import (
 )
 
 // ProjectListCmd lists all projects.
-type ProjectListCmd struct{}
+type ProjectListCmd struct {
+	Full bool `help:"Include all fields (status, org, subscription, timestamps)" short:"f"`
+}
 
 // Run executes the project:list command.
 func (c *ProjectListCmd) Run(ctx *Context) error {
@@ -20,7 +22,18 @@ func (c *ProjectListCmd) Run(ctx *Context) error {
 		return handleAPIError(err, "projects", "")
 	}
 
-	return ctx.Output(projects)
+	// Default: return lean summary (ID, Title, Region only)
+	// --full: return all fields
+	if c.Full {
+		return ctx.Output(projects)
+	}
+
+	// Convert to lean summaries
+	summaries := make([]api.ProjectSummary, len(projects))
+	for i, p := range projects {
+		summaries[i] = p.ToSummary()
+	}
+	return ctx.Output(summaries)
 }
 
 // ProjectInfoCmd shows project details.

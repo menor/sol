@@ -42,6 +42,37 @@ func TestProjectListCmd_Success(t *testing.T) {
 	}
 }
 
+func TestProjectListCmd_Full(t *testing.T) {
+	mockClient := &api.MockClient{
+		ListProjectsFunc: func(ctx context.Context) ([]api.ProjectRef, error) {
+			return []api.ProjectRef{
+				{ID: "proj1", Title: "Project One", Region: "us-1", OrganizationID: "org1", Status: "active"},
+			}, nil
+		},
+	}
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+	}
+
+	// Test with --full flag
+	cmd := &ProjectListCmd{Full: true}
+	err := cmd.Run(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify ListProjects was called
+	if len(mockClient.Calls) != 1 {
+		t.Errorf("expected 1 call, got %d", len(mockClient.Calls))
+	}
+}
+
 func TestProjectInfoCmd_Success(t *testing.T) {
 	mockClient := &api.MockClient{
 		GetProjectFunc: func(ctx context.Context, projectID string) (*api.Project, error) {

@@ -119,21 +119,22 @@ var commandSchemas = map[string]CommandSchema{
 	"project:list": {
 		Command:     "project:list",
 		Description: "List all projects accessible to the authenticated user",
+		Flags: []FlagSchema{
+			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (status, org, subscription, timestamps)"},
+		},
 		GlobalFlags: globalFlags,
 		Output: &OutputSchema{
 			Type: "array",
 			Items: &OutputSchema{
 				Type: "object",
 				Properties: map[string]PropertySchema{
-					"id":              {Type: "string", Description: "Project ID"},
-					"title":           {Type: "string", Description: "Project title"},
-					"region":          {Type: "string", Description: "Region hostname"},
-					"status":          {Type: "string", Description: "Project status"},
-					"organization_id": {Type: "string", Description: "Organization ID"},
+					"id":     {Type: "string", Description: "Project ID"},
+					"title":  {Type: "string", Description: "Project title"},
+					"region": {Type: "string", Description: "Region hostname"},
 				},
 			},
 		},
-		Examples:  []string{"sol project:list", "sol project:list --output toon"},
+		Examples:  []string{"sol project:list", "sol project:list --full"},
 		ExitCodes: defaultExitCodes,
 	},
 	"project:info": {

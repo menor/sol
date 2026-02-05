@@ -6,7 +6,8 @@ Agent-optimized CLI for Upsun.
 
 Sol is a minimal CLI optimized for AI code agents. It provides:
 
-- **TOON output by default** - Token-efficient format (~50% smaller than JSON)
+- **Lean output by default** - List commands return essential fields only (up to 99% smaller)
+- **TOON format by default** - Token-efficient encoding (~50% smaller than JSON)
 - **No interactive prompts** - Flags and stdin only
 - **Predictable exit codes** - 0 success, 1 user error, 2 API error, 3 internal
 - **Machine-readable errors** - Error codes and structured details
@@ -43,14 +44,20 @@ sol auth:info  # Shows authentication via environment variable
 ### Projects & Environments
 
 ```bash
-# List projects
+# List projects (lean output: id, title, region)
 sol project:list
+
+# List projects with all fields
+sol project:list --full
 
 # Project details
 sol project:info PROJECT_ID
 
-# List environments
+# List environments (lean output: id, name, status, parent)
 sol environment:list --project PROJECT_ID
+
+# List environments with all fields
+sol environment:list --project PROJECT_ID --full
 
 # Environment details
 sol environment:info main --project PROJECT_ID
@@ -62,8 +69,11 @@ sol ssh --project PROJECT_ID --environment main
 ### Activities
 
 ```bash
-# List recent activities
+# List recent activities (lean output: id, type, state, created_at)
 sol activity:list --project PROJECT_ID
+
+# List activities with all fields
+sol activity:list --project PROJECT_ID --full
 
 # Filter by state/type
 sol activity:list --project PROJECT_ID --state complete --limit 5
@@ -131,12 +141,24 @@ sol redeploy --project PROJECT_ID --environment main --wait
 
 ### Output Formats
 
+Sol optimizes output for agent context windows:
+
+**Lean output (default for list commands):**
+- `project:list` returns id, title, region (4KB vs 22KB full)
+- `environment:list` returns id, name, status, parent (86B vs 28KB full)
+- `activity:list` returns id, type, state, created_at (409B vs 4KB full)
+- Use `--full` flag when you need all fields
+
+**Format options:**
 ```bash
 # TOON (default) - token-efficient for LLMs (~50% smaller than JSON)
 sol project:list
 
 # JSON - use when humans need to read the output
 sol project:list --output json
+
+# Full output with all fields
+sol project:list --full
 ```
 
 ### Command Schema
@@ -165,6 +187,13 @@ sol --schema
 | `--no-cache` | | `false` | Bypass cache for this request |
 | `--debug` | | `false` | Show API request/response details |
 | `--schema` | | `false` | Output command schema instead of running |
+
+## Command-Specific Flags
+
+| Flag | Short | Commands | Description |
+|------|-------|----------|-------------|
+| `--full` | `-f` | `project:list`, `environment:list`, `activity:list` | Include all fields in output |
+| `--wait` | `-w` | `environment:branch`, `environment:activate`, `environment:deactivate`, `redeploy` | Wait for activity to complete |
 
 ## Configuration
 

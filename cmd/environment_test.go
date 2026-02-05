@@ -51,6 +51,43 @@ func TestEnvironmentListCmd_Success(t *testing.T) {
 	}
 }
 
+func TestEnvironmentListCmd_Full(t *testing.T) {
+	mockClient := &api.MockClient{
+		ListEnvironmentsFunc: func(ctx context.Context, projectID string) ([]api.Environment, error) {
+			return []api.Environment{
+				{ID: "main", Name: "main", Type: "production", Status: "active", MachineName: "main-abc123"},
+			}, nil
+		},
+	}
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
+	}
+
+	// Test with --full flag
+	cmd := &EnvironmentListCmd{Full: true}
+	err := cmd.Run(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify ListEnvironments was called
+	if len(mockClient.Calls) != 1 {
+		t.Errorf("expected 1 call, got %d", len(mockClient.Calls))
+	}
+}
+
 func TestEnvironmentInfoCmd_Success(t *testing.T) {
 	mockClient := &api.MockClient{
 		GetEnvironmentFunc: func(ctx context.Context, projectID, envID string) (*api.Environment, error) {

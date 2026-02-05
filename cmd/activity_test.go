@@ -65,6 +65,51 @@ func TestActivityListCmd_Success(t *testing.T) {
 	}
 }
 
+func TestActivityListCmd_Full(t *testing.T) {
+	mockClient := &api.MockClient{
+		ListActivitiesFunc: func(ctx context.Context, projectID string, opts *api.ListActivitiesOptions) ([]api.Activity, error) {
+			return []api.Activity{
+				{
+					ID:          "act1",
+					Type:        "environment.push",
+					State:       "complete",
+					Result:      "success",
+					Description: "Deployed changes",
+					Project:     projectID,
+					CreatedAt:   time.Now(),
+				},
+			}, nil
+		},
+	}
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
+	}
+
+	// Test with --full flag
+	cmd := &ActivityListCmd{Limit: 10, Full: true}
+	err := cmd.Run(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify ListActivities was called
+	if len(mockClient.Calls) != 1 {
+		t.Errorf("expected 1 call, got %d", len(mockClient.Calls))
+	}
+}
+
 func TestActivityLogCmd_Success(t *testing.T) {
 	mockClient := &api.MockClient{
 		GetActivityLogFunc: func(ctx context.Context, projectID, activityID string) (string, error) {

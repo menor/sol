@@ -2,6 +2,7 @@ package output
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 
@@ -120,7 +121,7 @@ type toonPanicError struct {
 }
 
 func (e *toonPanicError) Error() string {
-	return "toon encoding panic"
+	return fmt.Sprintf("toon encoding panic: %v", e.recovered)
 }
 
 func (f *TOONFormatter) WriteError(err error) error {

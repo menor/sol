@@ -25,6 +25,25 @@ type Environment struct {
 	HTTPAccess *HTTPAccess `json:"http_access,omitempty"`
 }
 
+// EnvironmentSummary is a minimal environment representation for list operations.
+// Contains essential fields for identifying environments and understanding hierarchy.
+type EnvironmentSummary struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
+	Parent string `json:"parent,omitempty"`
+}
+
+// ToSummary converts an Environment to a lean EnvironmentSummary.
+func (e *Environment) ToSummary() EnvironmentSummary {
+	return EnvironmentSummary{
+		ID:     e.ID,
+		Name:   e.Name,
+		Status: e.Status,
+		Parent: e.Parent,
+	}
+}
+
 // HTTPAccess contains HTTP access settings for an environment.
 type HTTPAccess struct {
 	IsEnabled   bool              `json:"is_enabled"`

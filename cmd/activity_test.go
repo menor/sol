@@ -271,8 +271,8 @@ func TestActivityListCmd_AllFlag(t *testing.T) {
 	mockClient := &api.MockClient{
 		ListActivitiesFunc: func(ctx context.Context, projectID string, opts *api.ListActivitiesOptions) ([]api.Activity, error) {
 			// Verify high limit is passed when --all is used
-			if opts.Limit != 1000 {
-				t.Errorf("expected limit 1000 with --all, got %d", opts.Limit)
+			if opts.Limit != maxActivityLimit {
+				t.Errorf("expected limit %d with --all, got %d", maxActivityLimit, opts.Limit)
 			}
 			return []api.Activity{
 				{ID: "act1", Type: "environment.push", State: "complete", CreatedAt: time.Now()},
@@ -337,5 +337,26 @@ func TestActivityListCmd_StartDateFilter(t *testing.T) {
 	err := cmd.Run(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestActivityListCmd_InvalidStartDate(t *testing.T) {
+	cli := &CLI{}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
+	}
+
+	// Invalid date format should return error
+	cmd := &ActivityListCmd{Limit: 10, Start: "not-a-date"}
+	err := cmd.Run(ctx)
+	if err == nil {
+		t.Fatal("expected error for invalid date format")
 	}
 }

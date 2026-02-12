@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"sort"
 )
 
 // Deployment represents the current deployment state of an environment.
@@ -127,6 +128,9 @@ func (c *Client) ListServices(ctx context.Context, projectID, envID string) ([]S
 			Disk: svc.Disk,
 		})
 	}
+	sort.Slice(services, func(i, j int) bool {
+		return services[i].Name < services[j].Name
+	})
 	return services, nil
 }
 
@@ -145,6 +149,9 @@ func (c *Client) GetRoutes(ctx context.Context, projectID, envID string) ([]Rout
 			Type:    route.Type,
 		})
 	}
+	sort.Slice(routes, func(i, j int) bool {
+		return routes[i].URL < routes[j].URL
+	})
 	return routes, nil
 }
 
@@ -175,14 +182,11 @@ func (c *Client) GetRelationships(ctx context.Context, projectID, envID, appName
 		}
 	}
 
-	// Also check workers
-	for worker, w := range deployment.Workers {
-		if appName != "" && worker != appName {
-			continue
+	sort.Slice(relationships, func(i, j int) bool {
+		if relationships[i].App != relationships[j].App {
+			return relationships[i].App < relationships[j].App
 		}
-		// Workers may have relationships too - check if type indicates app reference
-		_ = w // Workers don't have relationships in the same way
-	}
-
+		return relationships[i].Name < relationships[j].Name
+	})
 	return relationships, nil
 }

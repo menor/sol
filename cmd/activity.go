@@ -8,6 +8,12 @@ import (
 	"github.com/menor/sol/internal/errors"
 )
 
+// maxActivityLimit is the maximum number of activities fetched with --all.
+// The Upsun API doesn't support true "fetch all" - it requires a limit parameter.
+// 1000 is a reasonable upper bound that covers most use cases without excessive
+// API response times. For projects with more activities, use --start to paginate.
+const maxActivityLimit = 1000
+
 // ActivityListCmd lists project activities.
 type ActivityListCmd struct {
 	Limit       int    `help:"Maximum number of activities to return" default:"10"`
@@ -17,7 +23,7 @@ type ActivityListCmd struct {
 	ExcludeType string `help:"Exclude activities of this type" name:"exclude-type"`
 	Start       string `help:"Only activities after this date (ISO 8601 format)"`
 	Incomplete  bool   `help:"Only show incomplete activities (pending or in_progress)"`
-	All         bool   `help:"Show all activities (ignore limit)" short:"a"`
+	All         bool   `help:"Show all activities, up to 1000 (use --start to paginate further)" short:"a"`
 	Full        bool   `help:"Include all fields (result, description, timestamps, etc.)" short:"f"`
 }
 
@@ -37,20 +43,20 @@ func (c *ActivityListCmd) Run(ctx *Context) error {
 	// Determine limit
 	limit := c.Limit
 	if c.All {
-		limit = 1000 // High limit to get all activities
+		limit = maxActivityLimit
 	}
 
-	// Handle --incomplete flag by setting state filter
-	state := c.State
-	if c.Incomplete && state == "" {
-		// We'll filter client-side for both pending and in_progress
-		state = ""
+	// Validate --start date format early
+	if c.Start != "" {
+		if _, err := c.parseStartDate(); err != nil {
+			return err
+		}
 	}
 
 	opts := &api.ListActivitiesOptions{
 		Limit:       limit,
 		Type:        c.Type,
-		State:       state,
+		State:       c.State,
 		Result:      c.Result,
 		Environment: ctx.CLI.Environment,
 	}
@@ -77,6 +83,26 @@ func (c *ActivityListCmd) Run(ctx *Context) error {
 	return ctx.Output(summaries)
 }
 
+// parseStartDate attempts to parse the --start flag value.
+// Returns error if the format is invalid.
+func (c *ActivityListCmd) parseStartDate() (time.Time, error) {
+	if c.Start == "" {
+		return time.Time{}, nil
+	}
+	for _, format := range []string{
+		time.RFC3339,
+		"2006-01-02T15:04:05",
+		"2006-01-02",
+	} {
+		if t, err := time.Parse(format, c.Start); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, errors.NewValidationError("invalid date format").
+		WithDetail("input", c.Start).
+		WithHint("Use ISO 8601 format: 2006-01-02 or 2006-01-02T15:04:05Z")
+}
+
 // filterActivities applies client-side filters that the API doesn't support.
 func (c *ActivityListCmd) filterActivities(activities []api.Activity) []api.Activity {
 	// If no client-side filters, return all
@@ -84,22 +110,8 @@ func (c *ActivityListCmd) filterActivities(activities []api.Activity) []api.Acti
 		return activities
 	}
 
-	// Parse start date if provided
-	var startTime time.Time
-	if c.Start != "" {
-		var err error
-		// Try various date formats
-		for _, format := range []string{
-			time.RFC3339,
-			"2006-01-02T15:04:05",
-			"2006-01-02",
-		} {
-			startTime, err = time.Parse(format, c.Start)
-			if err == nil {
-				break
-			}
-		}
-	}
+	// Parse start date (already validated in Run)
+	startTime, _ := c.parseStartDate()
 
 	filtered := make([]api.Activity, 0, len(activities))
 	for _, a := range activities {

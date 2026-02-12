@@ -198,3 +198,144 @@ func TestActivityListCmd_NoProjectSpecified(t *testing.T) {
 		t.Fatal("expected error when no project specified")
 	}
 }
+
+func TestActivityListCmd_ExcludeTypeFilter(t *testing.T) {
+	mockClient := &api.MockClient{
+		ListActivitiesFunc: func(ctx context.Context, projectID string, opts *api.ListActivitiesOptions) ([]api.Activity, error) {
+			return []api.Activity{
+				{ID: "act1", Type: "environment.push", State: "complete", CreatedAt: time.Now()},
+				{ID: "act2", Type: "environment.backup", State: "complete", CreatedAt: time.Now()},
+				{ID: "act3", Type: "environment.push", State: "complete", CreatedAt: time.Now()},
+			}, nil
+		},
+	}
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
+	}
+
+	// Exclude backup activities
+	cmd := &ActivityListCmd{Limit: 10, ExcludeType: "environment.backup"}
+	err := cmd.Run(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestActivityListCmd_IncompleteFilter(t *testing.T) {
+	mockClient := &api.MockClient{
+		ListActivitiesFunc: func(ctx context.Context, projectID string, opts *api.ListActivitiesOptions) ([]api.Activity, error) {
+			return []api.Activity{
+				{ID: "act1", Type: "environment.push", State: "complete", CreatedAt: time.Now()},
+				{ID: "act2", Type: "environment.push", State: "in_progress", CreatedAt: time.Now()},
+				{ID: "act3", Type: "environment.backup", State: "pending", CreatedAt: time.Now()},
+			}, nil
+		},
+	}
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
+	}
+
+	// Only incomplete activities
+	cmd := &ActivityListCmd{Limit: 10, Incomplete: true}
+	err := cmd.Run(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestActivityListCmd_AllFlag(t *testing.T) {
+	mockClient := &api.MockClient{
+		ListActivitiesFunc: func(ctx context.Context, projectID string, opts *api.ListActivitiesOptions) ([]api.Activity, error) {
+			// Verify high limit is passed when --all is used
+			if opts.Limit != 1000 {
+				t.Errorf("expected limit 1000 with --all, got %d", opts.Limit)
+			}
+			return []api.Activity{
+				{ID: "act1", Type: "environment.push", State: "complete", CreatedAt: time.Now()},
+			}, nil
+		},
+	}
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
+	}
+
+	cmd := &ActivityListCmd{Limit: 10, All: true}
+	err := cmd.Run(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestActivityListCmd_StartDateFilter(t *testing.T) {
+	now := time.Now()
+	yesterday := now.Add(-24 * time.Hour)
+	twoDaysAgo := now.Add(-48 * time.Hour)
+
+	mockClient := &api.MockClient{
+		ListActivitiesFunc: func(ctx context.Context, projectID string, opts *api.ListActivitiesOptions) ([]api.Activity, error) {
+			return []api.Activity{
+				{ID: "act1", Type: "environment.push", State: "complete", CreatedAt: now},
+				{ID: "act2", Type: "environment.push", State: "complete", CreatedAt: yesterday},
+				{ID: "act3", Type: "environment.push", State: "complete", CreatedAt: twoDaysAgo},
+			}, nil
+		},
+	}
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
+	}
+
+	// Filter activities after yesterday (should exclude twoDaysAgo)
+	cmd := &ActivityListCmd{Limit: 10, Start: yesterday.Add(-time.Hour).Format(time.RFC3339)}
+	err := cmd.Run(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

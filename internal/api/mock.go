@@ -35,6 +35,12 @@ type MockClient struct {
 	SetEnvironmentVariableFunc    func(ctx context.Context, projectID, envID string, input *VariableInput) (*Variable, error)
 	DeleteEnvironmentVariableFunc func(ctx context.Context, projectID, envID, name string) error
 
+	// Deployment methods
+	GetCurrentDeploymentFunc func(ctx context.Context, projectID, envID string) (*Deployment, error)
+	ListServicesFunc         func(ctx context.Context, projectID, envID string) ([]ServiceSummary, error)
+	GetRoutesFunc            func(ctx context.Context, projectID, envID string) ([]RouteURL, error)
+	GetRelationshipsFunc     func(ctx context.Context, projectID, envID, appName string) ([]Relationship, error)
+
 	// Track calls for assertions
 	Calls []MockCall
 }
@@ -223,6 +229,42 @@ func (m *MockClient) DeleteEnvironmentVariable(ctx context.Context, projectID, e
 		return m.DeleteEnvironmentVariableFunc(ctx, projectID, envID, name)
 	}
 	return nil
+}
+
+// GetCurrentDeployment implements DeploymentAPI.
+func (m *MockClient) GetCurrentDeployment(ctx context.Context, projectID, envID string) (*Deployment, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetCurrentDeployment", Args: []any{projectID, envID}})
+	if m.GetCurrentDeploymentFunc != nil {
+		return m.GetCurrentDeploymentFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// ListServices implements DeploymentAPI.
+func (m *MockClient) ListServices(ctx context.Context, projectID, envID string) ([]ServiceSummary, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListServices", Args: []any{projectID, envID}})
+	if m.ListServicesFunc != nil {
+		return m.ListServicesFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// GetRoutes implements DeploymentAPI.
+func (m *MockClient) GetRoutes(ctx context.Context, projectID, envID string) ([]RouteURL, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetRoutes", Args: []any{projectID, envID}})
+	if m.GetRoutesFunc != nil {
+		return m.GetRoutesFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// GetRelationships implements DeploymentAPI.
+func (m *MockClient) GetRelationships(ctx context.Context, projectID, envID, appName string) ([]Relationship, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetRelationships", Args: []any{projectID, envID, appName}})
+	if m.GetRelationshipsFunc != nil {
+		return m.GetRelationshipsFunc(ctx, projectID, envID, appName)
+	}
+	return nil, nil
 }
 
 // Verify MockClient implements API at compile time.

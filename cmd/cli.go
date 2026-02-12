@@ -43,7 +43,10 @@ type CLI struct {
 	VariableGet     VariableGetCmd     `cmd:"" name:"variable:get" aliases:"var:get" help:"Get a variable"`
 	VariableSet     VariableSetCmd     `cmd:"" name:"variable:set" aliases:"var:set" help:"Set a variable"`
 	VariableDelete  VariableDeleteCmd  `cmd:"" name:"variable:delete" aliases:"var:delete" help:"Delete a variable"`
-	SSH             SSHCmd             `cmd:"" name:"ssh" help:"SSH into an environment"`
+	SSH                      SSHCmd                      `cmd:"" name:"ssh" help:"SSH into an environment"`
+	ServiceList              ServiceListCmd              `cmd:"" name:"service:list" aliases:"services" help:"List services in an environment"`
+	EnvironmentURL           EnvironmentURLCmd           `cmd:"" name:"environment:url" aliases:"env:url" help:"Show URLs for an environment"`
+	EnvironmentRelationships EnvironmentRelationshipsCmd `cmd:"" name:"environment:relationships" aliases:"env:relationships" help:"Show app-service relationships"`
 }
 
 // Execute parses command-line arguments and runs the appropriate command.

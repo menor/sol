@@ -43,13 +43,23 @@ type VariableAPI interface {
 	DeleteEnvironmentVariable(ctx context.Context, projectID, envID, name string) error
 }
 
+// DeploymentAPI defines deployment-related API operations.
+// These provide observability into the current deployment state.
+type DeploymentAPI interface {
+	GetCurrentDeployment(ctx context.Context, projectID, envID string) (*Deployment, error)
+	ListServices(ctx context.Context, projectID, envID string) ([]ServiceSummary, error)
+	GetRoutes(ctx context.Context, projectID, envID string) ([]RouteURL, error)
+	GetRelationships(ctx context.Context, projectID, envID, appName string) ([]Relationship, error)
+}
+
 // API is the full interface for all API operations.
-// It composes ProjectAPI, EnvironmentAPI, ActivityAPI, and VariableAPI interfaces.
+// It composes ProjectAPI, EnvironmentAPI, ActivityAPI, VariableAPI, and DeploymentAPI interfaces.
 type API interface {
 	ProjectAPI
 	EnvironmentAPI
 	ActivityAPI
 	VariableAPI
+	DeploymentAPI
 }
 
 // Verify Client implements API at compile time.

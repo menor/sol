@@ -7,7 +7,10 @@ import (
 
 // EnvironmentListCmd lists all environments in a project.
 type EnvironmentListCmd struct {
-	Full bool `help:"Include all fields (type, machine_name, timestamps, etc.)" short:"f"`
+	Full       bool   `help:"Include all fields (type, machine_name, timestamps, etc.)" short:"f"`
+	Status     string `help:"Filter by status (active, inactive, dirty)"`
+	NoInactive bool   `help:"Exclude inactive environments" name:"no-inactive"`
+	Type       string `help:"Filter by type (production, staging, development)"`
 }
 
 // Run executes the environment:list command.
@@ -27,6 +30,9 @@ func (c *EnvironmentListCmd) Run(ctx *Context) error {
 		return handleAPIError(err, "project", projectID)
 	}
 
+	// Apply filters
+	environments = c.filterEnvironments(environments)
+
 	// Default: return lean summary (ID, Name, Status, Parent only)
 	// --full: return all fields
 	if c.Full {
@@ -39,6 +45,35 @@ func (c *EnvironmentListCmd) Run(ctx *Context) error {
 		summaries[i] = e.ToSummary()
 	}
 	return ctx.Output(summaries)
+}
+
+// filterEnvironments applies the configured filters to the environment list.
+func (c *EnvironmentListCmd) filterEnvironments(envs []api.Environment) []api.Environment {
+	// If no filters, return all
+	if c.Status == "" && !c.NoInactive && c.Type == "" {
+		return envs
+	}
+
+	filtered := make([]api.Environment, 0, len(envs))
+	for _, e := range envs {
+		// Skip inactive if --no-inactive is set
+		if c.NoInactive && e.Status == "inactive" {
+			continue
+		}
+
+		// Filter by status
+		if c.Status != "" && e.Status != c.Status {
+			continue
+		}
+
+		// Filter by type
+		if c.Type != "" && e.Type != c.Type {
+			continue
+		}
+
+		filtered = append(filtered, e)
+	}
+	return filtered
 }
 
 // EnvironmentInfoCmd shows environment details.

@@ -205,3 +205,104 @@ func TestEnvironmentID_FromEnvironment(t *testing.T) {
 		t.Errorf("EnvironmentID() = %q, want %q", got, "main")
 	}
 }
+
+func TestEnvironmentListCmd_StatusFilter(t *testing.T) {
+	mockClient := &api.MockClient{
+		ListEnvironmentsFunc: func(ctx context.Context, projectID string) ([]api.Environment, error) {
+			return []api.Environment{
+				{ID: "main", Name: "main", Type: "production", Status: "active"},
+				{ID: "staging", Name: "staging", Type: "staging", Status: "active"},
+				{ID: "old-feature", Name: "old-feature", Type: "development", Status: "inactive"},
+			}, nil
+		},
+	}
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
+	}
+
+	// Filter by active status
+	cmd := &EnvironmentListCmd{Status: "active"}
+	err := cmd.Run(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestEnvironmentListCmd_NoInactiveFilter(t *testing.T) {
+	mockClient := &api.MockClient{
+		ListEnvironmentsFunc: func(ctx context.Context, projectID string) ([]api.Environment, error) {
+			return []api.Environment{
+				{ID: "main", Name: "main", Type: "production", Status: "active"},
+				{ID: "old-feature", Name: "old-feature", Type: "development", Status: "inactive"},
+			}, nil
+		},
+	}
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
+	}
+
+	// Exclude inactive environments
+	cmd := &EnvironmentListCmd{NoInactive: true}
+	err := cmd.Run(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestEnvironmentListCmd_TypeFilter(t *testing.T) {
+	mockClient := &api.MockClient{
+		ListEnvironmentsFunc: func(ctx context.Context, projectID string) ([]api.Environment, error) {
+			return []api.Environment{
+				{ID: "main", Name: "main", Type: "production", Status: "active"},
+				{ID: "staging", Name: "staging", Type: "staging", Status: "active"},
+				{ID: "feature", Name: "feature", Type: "development", Status: "active"},
+			}, nil
+		},
+	}
+
+	cli := &CLI{Output: "json"}
+	ctx := &Context{
+		Context: context.Background(),
+		CLI:     cli,
+		apiClientFactory: func(ctx context.Context) (api.API, error) {
+			return mockClient, nil
+		},
+		getEnvFunc: func(key string) string {
+			if key == "PLATFORM_PROJECT" {
+				return "proj123"
+			}
+			return ""
+		},
+	}
+
+	// Filter by production type
+	cmd := &EnvironmentListCmd{Type: "production"}
+	err := cmd.Run(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

@@ -163,6 +163,9 @@ var commandSchemas = map[string]CommandSchema{
 		Description: "List environments for a project",
 		Flags: []FlagSchema{
 			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (type, machine_name, timestamps, etc.)"},
+			{Name: "status", Type: "string", Description: "Filter by status (active, inactive, dirty)"},
+			{Name: "no-inactive", Type: "bool", Description: "Exclude inactive environments"},
+			{Name: "type", Type: "string", Description: "Filter by type (production, staging, development)"},
 		},
 		GlobalFlags: globalFlags,
 		Output: &OutputSchema{
@@ -177,7 +180,7 @@ var commandSchemas = map[string]CommandSchema{
 				},
 			},
 		},
-		Examples:  []string{"sol environment:list --project abc123", "sol environment:list -p abc123 --full"},
+		Examples:  []string{"sol environment:list --project abc123", "sol environment:list -p abc123 --status active", "sol environment:list -p abc123 --no-inactive"},
 		ExitCodes: defaultExitCodes,
 	},
 	"environment:info": {
@@ -288,6 +291,10 @@ var commandSchemas = map[string]CommandSchema{
 			{Name: "state", Type: "string", Description: "Filter by state (pending, in_progress, complete)"},
 			{Name: "result", Type: "string", Description: "Filter by result (success, failure)"},
 			{Name: "type", Type: "string", Description: "Filter by activity type"},
+			{Name: "exclude-type", Type: "string", Description: "Exclude activities of this type"},
+			{Name: "start", Type: "string", Description: "Only activities after this date (ISO 8601 format)"},
+			{Name: "incomplete", Type: "bool", Description: "Only show incomplete activities (pending or in_progress)"},
+			{Name: "all", Short: "a", Type: "bool", Description: "Show all activities (ignore limit)"},
 			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (result, description, timestamps, etc.)"},
 		},
 		GlobalFlags: globalFlags,
@@ -303,7 +310,7 @@ var commandSchemas = map[string]CommandSchema{
 				},
 			},
 		},
-		Examples:  []string{"sol activity:list --project abc123", "sol activity:list -p abc123 --result failure --limit 5"},
+		Examples:  []string{"sol activity:list --project abc123", "sol activity:list -p abc123 --result failure --limit 5", "sol activity:list -p abc123 --incomplete", "sol activity:list -p abc123 --all"},
 		ExitCodes: defaultExitCodes,
 	},
 	"activity:log": {
@@ -455,6 +462,79 @@ var commandSchemas = map[string]CommandSchema{
 			},
 		},
 		Examples:  []string{"sol push --project abc123", "sol push --project abc123 --target staging"},
+		ExitCodes: defaultExitCodes,
+	},
+	"service:list": {
+		Command:     "service:list",
+		Description: "List services (databases, caches, etc.) in an environment",
+		Arguments: []ArgumentSchema{
+			{Name: "environment_id", Type: "string", Description: "Environment ID (optional if --environment set)", Required: false},
+		},
+		Flags: []FlagSchema{
+			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (size, configuration, etc.)"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "array",
+			Items: &OutputSchema{
+				Type: "object",
+				Properties: map[string]PropertySchema{
+					"name": {Type: "string", Description: "Service name"},
+					"type": {Type: "string", Description: "Service type (mysql, redis, etc.)"},
+					"disk": {Type: "integer", Description: "Disk size in MB"},
+				},
+			},
+		},
+		Examples:  []string{"sol service:list --project abc123 --environment main", "sol service:list -p abc123 -e main --full"},
+		ExitCodes: defaultExitCodes,
+	},
+	"environment:url": {
+		Command:     "environment:url",
+		Description: "Show URLs for an environment",
+		Arguments: []ArgumentSchema{
+			{Name: "environment_id", Type: "string", Description: "Environment ID (optional if --environment set)", Required: false},
+		},
+		Flags: []FlagSchema{
+			{Name: "primary", Short: "1", Type: "bool", Description: "Show only the primary URL"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "array",
+			Items: &OutputSchema{
+				Type: "object",
+				Properties: map[string]PropertySchema{
+					"url":     {Type: "string", Description: "Route URL"},
+					"primary": {Type: "boolean", Description: "Whether this is the primary URL"},
+					"type":    {Type: "string", Description: "Route type (upstream, redirect)"},
+				},
+			},
+		},
+		Examples:  []string{"sol environment:url --project abc123 --environment main", "sol environment:url -p abc123 -e main --primary"},
+		ExitCodes: defaultExitCodes,
+	},
+	"environment:relationships": {
+		Command:     "environment:relationships",
+		Description: "Show relationships between apps and services",
+		Arguments: []ArgumentSchema{
+			{Name: "environment_id", Type: "string", Description: "Environment ID (optional if --environment set)", Required: false},
+		},
+		Flags: []FlagSchema{
+			{Name: "app", Short: "A", Type: "string", Description: "Filter by app name"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "array",
+			Items: &OutputSchema{
+				Type: "object",
+				Properties: map[string]PropertySchema{
+					"app":      {Type: "string", Description: "App name"},
+					"name":     {Type: "string", Description: "Relationship name"},
+					"service":  {Type: "string", Description: "Service name"},
+					"endpoint": {Type: "string", Description: "Service endpoint"},
+				},
+			},
+		},
+		Examples:  []string{"sol environment:relationships --project abc123 --environment main", "sol environment:relationships -p abc123 -e main --app frontend"},
 		ExitCodes: defaultExitCodes,
 	},
 }

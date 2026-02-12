@@ -34,7 +34,7 @@ func TestActivityListCmd_Success(t *testing.T) {
 	}
 
 	// Create fresh CLI and context - no globals to reset!
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -82,7 +82,7 @@ func TestActivityListCmd_Full(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -117,7 +117,7 @@ func TestActivityLogCmd_Success(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -160,7 +160,7 @@ func TestActivityLogCmd_NotFound(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -183,7 +183,7 @@ func TestActivityLogCmd_NotFound(t *testing.T) {
 }
 
 func TestActivityListCmd_NoProjectSpecified(t *testing.T) {
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -210,7 +210,7 @@ func TestActivityListCmd_ExcludeTypeFilter(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -244,7 +244,7 @@ func TestActivityListCmd_IncompleteFilter(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -280,7 +280,7 @@ func TestActivityListCmd_AllFlag(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -317,7 +317,7 @@ func TestActivityListCmd_StartDateFilter(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,

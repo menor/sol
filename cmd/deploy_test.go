@@ -23,7 +23,7 @@ func TestEnvironmentActivateCmd_Success(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -60,7 +60,7 @@ func TestEnvironmentActivateCmd_Success(t *testing.T) {
 }
 
 func TestEnvironmentActivateCmd_NoProject(t *testing.T) {
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -77,7 +77,7 @@ func TestEnvironmentActivateCmd_NoProject(t *testing.T) {
 }
 
 func TestEnvironmentActivateCmd_NoEnvironment(t *testing.T) {
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -111,7 +111,7 @@ func TestEnvironmentDeactivateCmd_Success(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -148,7 +148,7 @@ func TestEnvironmentDeleteCmd_Success(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -188,7 +188,7 @@ func TestEnvironmentDeleteCmd_APIError(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -225,7 +225,7 @@ func TestRedeployCmd_Success(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -273,7 +273,7 @@ func TestRedeployCmd_WithExplicitEnvironment(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -301,7 +301,7 @@ func TestRedeployCmd_WithExplicitEnvironment(t *testing.T) {
 }
 
 func TestPushCmd_NoProject(t *testing.T) {
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -328,7 +328,7 @@ func TestPushCmd_NoRepositoryURL(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -360,7 +360,7 @@ func TestPushCmd_GetProjectError(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,

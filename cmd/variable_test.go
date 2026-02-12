@@ -34,7 +34,7 @@ func TestVariableListCmd_ProjectLevel(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -79,7 +79,7 @@ func TestVariableListCmd_EnvironmentLevel(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json", Environment: "main"} // Environment flag set
+	cli := &CLI{Environment: "main"} // Environment flag set
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -125,7 +125,7 @@ func TestVariableGetCmd_Success(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -171,7 +171,7 @@ func TestVariableSetCmd_Success(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -223,7 +223,7 @@ func TestVariableDeleteCmd_Success(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -266,7 +266,7 @@ func TestVariableGetCmd_NotFound(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -289,7 +289,7 @@ func TestVariableGetCmd_NotFound(t *testing.T) {
 }
 
 func TestVariableListCmd_NoProjectSpecified(t *testing.T) {
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,

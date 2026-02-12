@@ -17,7 +17,7 @@ func TestEnvironmentURLCmd_Success(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -60,7 +60,7 @@ func TestEnvironmentURLCmd_Primary(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -92,7 +92,7 @@ func TestEnvironmentURLCmd_Primary(t *testing.T) {
 }
 
 func TestEnvironmentURLCmd_NoProjectSpecified(t *testing.T) {
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -118,7 +118,7 @@ func TestEnvironmentRelationshipsCmd_Success(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -163,7 +163,7 @@ func TestEnvironmentRelationshipsCmd_WithAppFilter(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -201,7 +201,7 @@ func TestEnvironmentRelationshipsCmd_EmptyResult(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -227,7 +227,7 @@ func TestEnvironmentRelationshipsCmd_EmptyResult(t *testing.T) {
 }
 
 func TestEnvironmentRelationshipsCmd_NoProjectSpecified(t *testing.T) {
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -253,7 +253,7 @@ func TestEnvironmentRelationshipsCmd_APIError(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,

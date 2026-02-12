@@ -18,7 +18,7 @@ func TestProjectListCmd_Success(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -51,7 +51,7 @@ func TestProjectListCmd_Full(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -85,7 +85,7 @@ func TestProjectInfoCmd_Success(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -123,7 +123,7 @@ func TestProjectInfoCmd_NotFound(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -140,7 +140,7 @@ func TestProjectInfoCmd_NotFound(t *testing.T) {
 }
 
 func TestProjectInfoCmd_NoProjectSpecified(t *testing.T) {
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -157,7 +157,7 @@ func TestProjectInfoCmd_NoProjectSpecified(t *testing.T) {
 }
 
 func TestProjectID_FromEnvironment(t *testing.T) {
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -176,7 +176,7 @@ func TestProjectID_FromEnvironment(t *testing.T) {
 }
 
 func TestProjectID_FromFlag(t *testing.T) {
-	cli := &CLI{Output: "json", Project: "flag-project"}
+	cli := &CLI{Project: "flag-project"}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,

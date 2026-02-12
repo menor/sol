@@ -17,7 +17,7 @@ func TestServiceListCmd_Success(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -69,7 +69,7 @@ func TestServiceListCmd_Full(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -112,7 +112,7 @@ func TestServiceListCmd_WithEnvironmentArg(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -141,7 +141,7 @@ func TestServiceListCmd_WithEnvironmentArg(t *testing.T) {
 }
 
 func TestServiceListCmd_NoProjectSpecified(t *testing.T) {
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -158,7 +158,7 @@ func TestServiceListCmd_NoProjectSpecified(t *testing.T) {
 }
 
 func TestServiceListCmd_NoEnvironmentSpecified(t *testing.T) {
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,
@@ -187,7 +187,7 @@ func TestServiceListCmd_APIError(t *testing.T) {
 		},
 	}
 
-	cli := &CLI{Output: "json"}
+	cli := &CLI{}
 	ctx := &Context{
 		Context: context.Background(),
 		CLI:     cli,

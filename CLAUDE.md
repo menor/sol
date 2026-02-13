@@ -117,10 +117,9 @@ All errors should use `internal/errors.CLIError` with:
 Exit codes are mapped from error codes via `CLIError.ExitCode()`.
 
 ### Output
-Default output is JSON. The `--output` flag supports:
-- `json` (default) - structured JSON
-- `toon` - token-optimized notation (not yet implemented)
-- `text` - human-readable text
+Default output is TOON. The `--output` flag supports:
+- `toon` (default) - Token-Oriented Object Notation, ~50% fewer tokens than JSON
+- `json` - structured JSON for human readability
 
 ### Kong Command Pattern (IMPORTANT)
 
@@ -335,7 +334,7 @@ func TestMyCmd_Success(t *testing.T) {
     }
 
     // Create fresh CLI and Context - no globals to manage
-    cli := &CLI{Output: "json"}
+    cli := &CLI{}  // Uses default toon output
     ctx := &Context{
         Context: context.Background(),
         CLI:     cli,
@@ -422,6 +421,31 @@ if resp.StatusCode == http.StatusTooManyRequests {
 ```
 
 ### Go Idioms
+
+**Deterministic output from maps (IMPORTANT):**
+
+Go map iteration order is non-deterministic. When outputting data from maps, always convert to a sorted slice:
+
+```go
+// Bad - non-deterministic output order
+return ctx.Output(deployment.Routes)  // map[string]Route
+
+// Good - deterministic output order
+type routeWithURL struct {
+    URL string `json:"url"`
+    api.Route
+}
+routes := make([]routeWithURL, 0, len(deployment.Routes))
+for url, route := range deployment.Routes {
+    routes = append(routes, routeWithURL{URL: url, Route: route})
+}
+sort.Slice(routes, func(i, j int) bool {
+    return routes[i].URL < routes[j].URL
+})
+return ctx.Output(routes)
+```
+
+This applies to all command output, especially `--full` flags that return raw API data. Agents and tests expect consistent output ordering.
 
 **Use local rand.Rand instead of global:**
 ```go

@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"sort"
+
+	"github.com/menor/sol/internal/api"
 	"github.com/menor/sol/internal/errors"
 )
 
@@ -33,7 +36,19 @@ func (c *RouteListCmd) Run(ctx *Context) error {
 		if err != nil {
 			return handleAPIError(err, "environment", envID)
 		}
-		return ctx.Output(deployment.Routes)
+		// Convert map to sorted slice for deterministic output
+		type routeWithURL struct {
+			URL string `json:"url"`
+			api.Route
+		}
+		routes := make([]routeWithURL, 0, len(deployment.Routes))
+		for url, route := range deployment.Routes {
+			routes = append(routes, routeWithURL{URL: url, Route: route})
+		}
+		sort.Slice(routes, func(i, j int) bool {
+			return routes[i].URL < routes[j].URL
+		})
+		return ctx.Output(routes)
 	}
 
 	// Default: lean summaries

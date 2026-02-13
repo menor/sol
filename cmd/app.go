@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/menor/sol/internal/api"
 	"github.com/menor/sol/internal/errors"
 )
 
@@ -34,18 +35,13 @@ func (c *AppListCmd) Run(ctx *Context) error {
 			return handleAPIError(err, "environment", envID)
 		}
 		// Combine webapps and workers for full output
+		// Note: map output order is non-deterministic; use lean output for deterministic results
 		result := struct {
-			Webapps map[string]any `json:"webapps,omitempty"`
-			Workers map[string]any `json:"workers,omitempty"`
+			Webapps map[string]api.Webapp `json:"webapps,omitempty"`
+			Workers map[string]api.Worker `json:"workers,omitempty"`
 		}{
-			Webapps: make(map[string]any),
-			Workers: make(map[string]any),
-		}
-		for name, webapp := range deployment.Webapps {
-			result.Webapps[name] = webapp
-		}
-		for name, worker := range deployment.Workers {
-			result.Workers[name] = worker
+			Webapps: deployment.Webapps,
+			Workers: deployment.Workers,
 		}
 		return ctx.Output(result)
 	}

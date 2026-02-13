@@ -48,6 +48,8 @@ type VariableAPI interface {
 type DeploymentAPI interface {
 	GetCurrentDeployment(ctx context.Context, projectID, envID string) (*Deployment, error)
 	ListServices(ctx context.Context, projectID, envID string) ([]ServiceSummary, error)
+	ListApps(ctx context.Context, projectID, envID string) ([]AppSummary, error)
+	ListRoutes(ctx context.Context, projectID, envID string) ([]RouteSummary, error)
 	GetRoutes(ctx context.Context, projectID, envID string) ([]RouteURL, error)
 	GetRelationships(ctx context.Context, projectID, envID, appName string) ([]Relationship, error)
 }

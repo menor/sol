@@ -38,6 +38,8 @@ type MockClient struct {
 	// Deployment methods
 	GetCurrentDeploymentFunc func(ctx context.Context, projectID, envID string) (*Deployment, error)
 	ListServicesFunc         func(ctx context.Context, projectID, envID string) ([]ServiceSummary, error)
+	ListAppsFunc             func(ctx context.Context, projectID, envID string) ([]AppSummary, error)
+	ListRoutesFunc           func(ctx context.Context, projectID, envID string) ([]RouteSummary, error)
 	GetRoutesFunc            func(ctx context.Context, projectID, envID string) ([]RouteURL, error)
 	GetRelationshipsFunc     func(ctx context.Context, projectID, envID, appName string) ([]Relationship, error)
 
@@ -245,6 +247,24 @@ func (m *MockClient) ListServices(ctx context.Context, projectID, envID string) 
 	m.Calls = append(m.Calls, MockCall{Method: "ListServices", Args: []any{projectID, envID}})
 	if m.ListServicesFunc != nil {
 		return m.ListServicesFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// ListApps implements DeploymentAPI.
+func (m *MockClient) ListApps(ctx context.Context, projectID, envID string) ([]AppSummary, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListApps", Args: []any{projectID, envID}})
+	if m.ListAppsFunc != nil {
+		return m.ListAppsFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// ListRoutes implements DeploymentAPI.
+func (m *MockClient) ListRoutes(ctx context.Context, projectID, envID string) ([]RouteSummary, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListRoutes", Args: []any{projectID, envID}})
+	if m.ListRoutesFunc != nil {
+		return m.ListRoutesFunc(ctx, projectID, envID)
 	}
 	return nil, nil
 }

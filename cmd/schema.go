@@ -537,6 +537,58 @@ var commandSchemas = map[string]CommandSchema{
 		Examples:  []string{"sol environment:relationships --project abc123 --environment main", "sol environment:relationships -p abc123 -e main --app frontend"},
 		ExitCodes: defaultExitCodes,
 	},
+	"app:list": {
+		Command:     "app:list",
+		Description: "List applications (webapps and workers) in an environment",
+		Arguments: []ArgumentSchema{
+			{Name: "environment_id", Type: "string", Description: "Environment ID (optional if --environment set)", Required: false},
+		},
+		Flags: []FlagSchema{
+			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (mounts, relationships, configuration)"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "array",
+			Items: &OutputSchema{
+				Type: "object",
+				Properties: map[string]PropertySchema{
+					"name":   {Type: "string", Description: "App name"},
+					"type":   {Type: "string", Description: "App type (nodejs, php, python, etc.)"},
+					"size":   {Type: "string", Description: "Container size"},
+					"disk":   {Type: "integer", Description: "Disk size in MB"},
+					"worker": {Type: "boolean", Description: "Whether this is a worker process"},
+				},
+			},
+		},
+		Examples:  []string{"sol app:list --project abc123 --environment main", "sol app:list -p abc123 -e main --full"},
+		ExitCodes: defaultExitCodes,
+	},
+	"route:list": {
+		Command:     "route:list",
+		Description: "List routes for an environment",
+		Arguments: []ArgumentSchema{
+			{Name: "environment_id", Type: "string", Description: "Environment ID (optional if --environment set)", Required: false},
+		},
+		Flags: []FlagSchema{
+			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (TLS settings, redirects, cache)"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "array",
+			Items: &OutputSchema{
+				Type: "object",
+				Properties: map[string]PropertySchema{
+					"url":      {Type: "string", Description: "Route URL"},
+					"primary":  {Type: "boolean", Description: "Whether this is the primary route"},
+					"type":     {Type: "string", Description: "Route type (upstream, redirect)"},
+					"upstream": {Type: "string", Description: "Upstream app:endpoint for upstream routes"},
+					"to":       {Type: "string", Description: "Redirect target for redirect routes"},
+				},
+			},
+		},
+		Examples:  []string{"sol route:list --project abc123 --environment main", "sol route:list -p abc123 -e main --full"},
+		ExitCodes: defaultExitCodes,
+	},
 }
 
 // GetCommandSchema returns the schema for a command, or nil if not found.

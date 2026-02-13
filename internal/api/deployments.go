@@ -33,6 +33,24 @@ type ServiceSummary struct {
 	Disk int    `json:"disk,omitempty"`
 }
 
+// AppSummary is a lean representation of an application for list output.
+type AppSummary struct {
+	Name   string `json:"name"`
+	Type   string `json:"type"`
+	Size   string `json:"size,omitempty"`
+	Disk   int    `json:"disk,omitempty"`
+	Worker bool   `json:"worker,omitempty"`
+}
+
+// RouteSummary provides detailed route information for route:list.
+type RouteSummary struct {
+	URL      string `json:"url"`
+	Primary  bool   `json:"primary"`
+	Type     string `json:"type"`
+	Upstream string `json:"upstream,omitempty"`
+	To       string `json:"to,omitempty"`
+}
+
 // Webapp represents an application container.
 type Webapp struct {
 	Type          string              `json:"type"`
@@ -189,4 +207,62 @@ func (c *Client) GetRelationships(ctx context.Context, projectID, envID, appName
 		return relationships[i].Name < relationships[j].Name
 	})
 	return relationships, nil
+}
+
+// ListApps returns webapps and workers from the current deployment.
+func (c *Client) ListApps(ctx context.Context, projectID, envID string) ([]AppSummary, error) {
+	deployment, err := c.GetCurrentDeployment(ctx, projectID, envID)
+	if err != nil {
+		return nil, err
+	}
+
+	apps := make([]AppSummary, 0, len(deployment.Webapps)+len(deployment.Workers))
+
+	// Add webapps
+	for name, webapp := range deployment.Webapps {
+		apps = append(apps, AppSummary{
+			Name: name,
+			Type: webapp.Type,
+			Size: webapp.Size,
+			Disk: webapp.Disk,
+		})
+	}
+
+	// Add workers
+	for name, worker := range deployment.Workers {
+		apps = append(apps, AppSummary{
+			Name:   name,
+			Type:   worker.Type,
+			Size:   worker.Size,
+			Worker: true,
+		})
+	}
+
+	sort.Slice(apps, func(i, j int) bool {
+		return apps[i].Name < apps[j].Name
+	})
+	return apps, nil
+}
+
+// ListRoutes returns detailed route information from the current deployment.
+func (c *Client) ListRoutes(ctx context.Context, projectID, envID string) ([]RouteSummary, error) {
+	deployment, err := c.GetCurrentDeployment(ctx, projectID, envID)
+	if err != nil {
+		return nil, err
+	}
+
+	routes := make([]RouteSummary, 0, len(deployment.Routes))
+	for urlStr, route := range deployment.Routes {
+		routes = append(routes, RouteSummary{
+			URL:      urlStr,
+			Primary:  route.Primary,
+			Type:     route.Type,
+			Upstream: route.Upstream,
+			To:       route.To,
+		})
+	}
+	sort.Slice(routes, func(i, j int) bool {
+		return routes[i].URL < routes[j].URL
+	})
+	return routes, nil
 }

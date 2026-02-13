@@ -45,6 +45,8 @@ type CLI struct {
 	VariableDelete  VariableDeleteCmd  `cmd:"" name:"variable:delete" aliases:"var:delete" help:"Delete a variable"`
 	SSH                      SSHCmd                      `cmd:"" name:"ssh" help:"SSH into an environment"`
 	ServiceList              ServiceListCmd              `cmd:"" name:"service:list" aliases:"services" help:"List services in an environment"`
+	AppList                  AppListCmd                  `cmd:"" name:"app:list" aliases:"apps" help:"List applications in an environment"`
+	RouteList                RouteListCmd                `cmd:"" name:"route:list" aliases:"routes" help:"List routes for an environment"`
 	EnvironmentURL           EnvironmentURLCmd           `cmd:"" name:"environment:url" aliases:"env:url" help:"Show URLs for an environment"`
 	EnvironmentRelationships EnvironmentRelationshipsCmd `cmd:"" name:"environment:relationships" aliases:"env:relationships" help:"Show app-service relationships"`
 }

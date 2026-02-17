@@ -563,6 +563,28 @@ var commandSchemas = map[string]CommandSchema{
 		Examples:  []string{"sol app:list --project abc123 --environment main", "sol app:list -p abc123 -e main --full"},
 		ExitCodes: defaultExitCodes,
 	},
+	"app:config-validate": {
+		Command:     "app:config-validate",
+		Description: "Validate .upsun/config.yaml configuration file",
+		Arguments: []ArgumentSchema{
+			{Name: "path", Type: "string", Description: "Path to config file or directory (defaults to current directory)", Required: false},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "object",
+			Properties: map[string]PropertySchema{
+				"valid":        {Type: "boolean", Description: "Whether the config is valid"},
+				"file_path":    {Type: "string", Description: "Path to the validated file"},
+				"applications": {Type: "array", Description: "List of validated applications"},
+				"services":     {Type: "array", Description: "List of service names"},
+				"routes":       {Type: "integer", Description: "Number of routes defined"},
+				"errors":       {Type: "array", Description: "Validation errors (if any)"},
+				"warnings":     {Type: "array", Description: "Validation warnings (if any)"},
+			},
+		},
+		Examples:  []string{"sol app:config-validate", "sol app:config-validate .upsun/config.yaml", "sol app:config-validate /path/to/project"},
+		ExitCodes: defaultExitCodes,
+	},
 	"route:list": {
 		Command:     "route:list",
 		Description: "List routes for an environment",

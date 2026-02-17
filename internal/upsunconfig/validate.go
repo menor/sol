@@ -305,8 +305,14 @@ func validateApplications(apps map[string]Application, result *ValidationResult)
 			})
 		}
 
-		// Validate mounts
-		for mountPath, mount := range app.Mounts {
+		// Validate mounts (sorted for deterministic output)
+		mountPaths := make([]string, 0, len(app.Mounts))
+		for path := range app.Mounts {
+			mountPaths = append(mountPaths, path)
+		}
+		sort.Strings(mountPaths)
+		for _, mountPath := range mountPaths {
+			mount := app.Mounts[mountPath]
 			if mount.Source == "" {
 				result.Warnings = append(result.Warnings, fmt.Sprintf("mount '%s' in app '%s' missing 'source'", mountPath, name))
 			} else if mount.Source != "instance" && mount.Source != "storage" {

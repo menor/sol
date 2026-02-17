@@ -249,3 +249,116 @@ applications: {}
 		t.Errorf("expected 1 error, got %d", len(result.Errors))
 	}
 }
+
+func TestValidate_MountMissingSource(t *testing.T) {
+	data := []byte(`
+applications:
+  app:
+    type: nodejs:18
+    mounts:
+      /data:
+        source_path: data
+`)
+	result, err := Validate(data, ".upsun/config.yaml")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !result.Valid {
+		t.Error("expected valid config (missing source is a warning)")
+	}
+	if len(result.Warnings) != 1 {
+		t.Errorf("expected 1 warning, got %d", len(result.Warnings))
+	}
+	if len(result.Warnings) > 0 && result.Warnings[0] != "mount '/data' in app 'app' missing 'source'" {
+		t.Errorf("unexpected warning: %s", result.Warnings[0])
+	}
+}
+
+func TestValidate_MountUnknownSource(t *testing.T) {
+	data := []byte(`
+applications:
+  app:
+    type: nodejs:18
+    mounts:
+      /data:
+        source: local
+        source_path: data
+`)
+	result, err := Validate(data, ".upsun/config.yaml")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !result.Valid {
+		t.Error("expected valid config (unknown source is a warning)")
+	}
+	if len(result.Warnings) != 1 {
+		t.Errorf("expected 1 warning, got %d", len(result.Warnings))
+	}
+	if len(result.Warnings) > 0 && result.Warnings[0] != "mount '/data' in app 'app' has unknown source 'local': expected 'instance' or 'storage'" {
+		t.Errorf("unexpected warning: %s", result.Warnings[0])
+	}
+}
+
+func TestValidate_MountValidSources(t *testing.T) {
+	data := []byte(`
+applications:
+  app:
+    type: nodejs:18
+    mounts:
+      /cache:
+        source: instance
+        source_path: cache
+      /uploads:
+        source: storage
+        source_path: uploads
+`)
+	result, err := Validate(data, ".upsun/config.yaml")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !result.Valid {
+		t.Errorf("expected valid config, got errors: %v", result.Errors)
+	}
+	if len(result.Warnings) != 0 {
+		t.Errorf("expected 0 warnings, got %d: %v", len(result.Warnings), result.Warnings)
+	}
+}
+
+func TestValidate_MountWarningsDeterministic(t *testing.T) {
+	data := []byte(`
+applications:
+  app:
+    type: nodejs:18
+    mounts:
+      /z-mount:
+        source: bad
+        source_path: z
+      /a-mount:
+        source: bad
+        source_path: a
+      /m-mount:
+        source: bad
+        source_path: m
+`)
+	result, err := Validate(data, ".upsun/config.yaml")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(result.Warnings) != 3 {
+		t.Fatalf("expected 3 warnings, got %d", len(result.Warnings))
+	}
+	// Verify sorted order (a-mount, m-mount, z-mount)
+	if result.Warnings[0] != "mount '/a-mount' in app 'app' has unknown source 'bad': expected 'instance' or 'storage'" {
+		t.Errorf("expected /a-mount warning first, got: %s", result.Warnings[0])
+	}
+	if result.Warnings[1] != "mount '/m-mount' in app 'app' has unknown source 'bad': expected 'instance' or 'storage'" {
+		t.Errorf("expected /m-mount warning second, got: %s", result.Warnings[1])
+	}
+	if result.Warnings[2] != "mount '/z-mount' in app 'app' has unknown source 'bad': expected 'instance' or 'storage'" {
+		t.Errorf("expected /z-mount warning third, got: %s", result.Warnings[2])
+	}
+}

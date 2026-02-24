@@ -43,6 +43,13 @@ type MockClient struct {
 	GetRoutesFunc            func(ctx context.Context, projectID, envID string) ([]RouteURL, error)
 	GetRelationshipsFunc     func(ctx context.Context, projectID, envID, appName string) ([]Relationship, error)
 
+	// Backup methods
+	ListBackupsFunc   func(ctx context.Context, projectID, envID string) ([]Backup, error)
+	GetBackupFunc     func(ctx context.Context, projectID, envID, backupID string) (*Backup, error)
+	CreateBackupFunc  func(ctx context.Context, projectID, envID string, safe bool) (*Activity, error)
+	RestoreBackupFunc func(ctx context.Context, projectID, envID, backupID string, input RestoreBackupInput) (*Activity, error)
+	DeleteBackupFunc  func(ctx context.Context, projectID, envID, backupID string) error
+
 	// Track calls for assertions
 	Calls []MockCall
 }
@@ -285,6 +292,51 @@ func (m *MockClient) GetRelationships(ctx context.Context, projectID, envID, app
 		return m.GetRelationshipsFunc(ctx, projectID, envID, appName)
 	}
 	return nil, nil
+}
+
+// ListBackups implements BackupAPI.
+func (m *MockClient) ListBackups(ctx context.Context, projectID, envID string) ([]Backup, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListBackups", Args: []any{projectID, envID}})
+	if m.ListBackupsFunc != nil {
+		return m.ListBackupsFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// GetBackup implements BackupAPI.
+func (m *MockClient) GetBackup(ctx context.Context, projectID, envID, backupID string) (*Backup, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetBackup", Args: []any{projectID, envID, backupID}})
+	if m.GetBackupFunc != nil {
+		return m.GetBackupFunc(ctx, projectID, envID, backupID)
+	}
+	return nil, nil
+}
+
+// CreateBackup implements BackupAPI.
+func (m *MockClient) CreateBackup(ctx context.Context, projectID, envID string, safe bool) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "CreateBackup", Args: []any{projectID, envID, safe}})
+	if m.CreateBackupFunc != nil {
+		return m.CreateBackupFunc(ctx, projectID, envID, safe)
+	}
+	return nil, nil
+}
+
+// RestoreBackup implements BackupAPI.
+func (m *MockClient) RestoreBackup(ctx context.Context, projectID, envID, backupID string, input RestoreBackupInput) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "RestoreBackup", Args: []any{projectID, envID, backupID, input}})
+	if m.RestoreBackupFunc != nil {
+		return m.RestoreBackupFunc(ctx, projectID, envID, backupID, input)
+	}
+	return nil, nil
+}
+
+// DeleteBackup implements BackupAPI.
+func (m *MockClient) DeleteBackup(ctx context.Context, projectID, envID, backupID string) error {
+	m.Calls = append(m.Calls, MockCall{Method: "DeleteBackup", Args: []any{projectID, envID, backupID}})
+	if m.DeleteBackupFunc != nil {
+		return m.DeleteBackupFunc(ctx, projectID, envID, backupID)
+	}
+	return nil
 }
 
 // Verify MockClient implements API at compile time.

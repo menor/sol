@@ -50,6 +50,11 @@ type CLI struct {
 	RouteList                RouteListCmd                `cmd:"" name:"route:list" aliases:"routes" help:"List routes for an environment"`
 	EnvironmentURL           EnvironmentURLCmd           `cmd:"" name:"environment:url" aliases:"env:url" help:"Show URLs for an environment"`
 	EnvironmentRelationships EnvironmentRelationshipsCmd `cmd:"" name:"environment:relationships" aliases:"env:relationships" help:"Show app-service relationships"`
+	BackupList               BackupListCmd               `cmd:"" name:"backup:list" aliases:"backups" help:"List backups for an environment"`
+	BackupGet                BackupGetCmd                `cmd:"" name:"backup:get" aliases:"backup" help:"Get backup details"`
+	BackupCreate             BackupCreateCmd             `cmd:"" name:"backup:create" help:"Create a new backup"`
+	BackupRestore            BackupRestoreCmd            `cmd:"" name:"backup:restore" help:"Restore a backup"`
+	BackupDelete             BackupDeleteCmd             `cmd:"" name:"backup:delete" help:"Delete a backup"`
 }
 
 // Execute parses command-line arguments and runs the appropriate command.

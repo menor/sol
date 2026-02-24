@@ -611,6 +611,124 @@ var commandSchemas = map[string]CommandSchema{
 		Examples:  []string{"sol route:list --project abc123 --environment main", "sol route:list -p abc123 -e main --full"},
 		ExitCodes: defaultExitCodes,
 	},
+	"backup:list": {
+		Command:     "backup:list",
+		Description: "List backups for an environment",
+		Arguments: []ArgumentSchema{
+			{Name: "environment_id", Type: "string", Description: "Environment ID (optional if --environment set)", Required: false},
+		},
+		Flags: []FlagSchema{
+			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (expiry, size, status)"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "array",
+			Items: &OutputSchema{
+				Type: "object",
+				Properties: map[string]PropertySchema{
+					"id":         {Type: "string", Description: "Backup ID"},
+					"created_at": {Type: "string", Description: "Creation timestamp"},
+					"safe":       {Type: "boolean", Description: "Whether backup is consistent (services paused)"},
+					"automated":  {Type: "boolean", Description: "Whether backup was automated"},
+					"commit_id":  {Type: "string", Description: "Git commit ID"},
+				},
+			},
+		},
+		Examples:  []string{"sol backup:list --project abc123 --environment main", "sol backup:list -p abc123 -e main --full"},
+		ExitCodes: defaultExitCodes,
+	},
+	"backup:get": {
+		Command:     "backup:get",
+		Description: "Get details of a specific backup",
+		Arguments: []ArgumentSchema{
+			{Name: "backup_id", Type: "string", Description: "Backup ID", Required: true},
+			{Name: "environment_id", Type: "string", Description: "Environment ID (optional if --environment set)", Required: false},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "object",
+			Properties: map[string]PropertySchema{
+				"id":              {Type: "string", Description: "Backup ID"},
+				"created_at":     {Type: "string", Description: "Creation timestamp"},
+				"expires_at":     {Type: "string", Description: "Expiration timestamp"},
+				"safe":           {Type: "boolean", Description: "Whether backup is consistent"},
+				"automated":      {Type: "boolean", Description: "Whether backup was automated"},
+				"restorable":     {Type: "boolean", Description: "Whether backup can be restored"},
+				"commit_id":      {Type: "string", Description: "Git commit ID"},
+				"environment":    {Type: "string", Description: "Source environment"},
+				"size_of_volumes": {Type: "integer", Description: "Backup size in bytes"},
+			},
+		},
+		Examples:  []string{"sol backup:get backup123 --project abc123 --environment main"},
+		ExitCodes: defaultExitCodes,
+	},
+	"backup:create": {
+		Command:     "backup:create",
+		Description: "Create a new backup of an environment",
+		Arguments: []ArgumentSchema{
+			{Name: "environment_id", Type: "string", Description: "Environment ID (optional if --environment set)", Required: false},
+		},
+		Flags: []FlagSchema{
+			{Name: "live", Short: "l", Type: "bool", Description: "Create live backup (no pause, may have inconsistencies)"},
+			{Name: "wait", Short: "w", Type: "bool", Description: "Wait for backup to complete"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "object",
+			Properties: map[string]PropertySchema{
+				"id":         {Type: "string", Description: "Activity ID"},
+				"type":       {Type: "string", Description: "Activity type"},
+				"state":      {Type: "string", Description: "Activity state"},
+				"created_at": {Type: "string", Description: "Creation timestamp"},
+			},
+		},
+		Examples:  []string{"sol backup:create --project abc123 --environment main", "sol backup:create -p abc123 -e main --wait", "sol backup:create --live"},
+		ExitCodes: defaultExitCodes,
+	},
+	"backup:restore": {
+		Command:     "backup:restore",
+		Description: "Restore a backup to an environment",
+		Arguments: []ArgumentSchema{
+			{Name: "backup_id", Type: "string", Description: "Backup ID to restore", Required: true},
+			{Name: "environment_id", Type: "string", Description: "Source environment ID (optional if --environment set)", Required: false},
+		},
+		Flags: []FlagSchema{
+			{Name: "target", Short: "t", Type: "string", Description: "Target environment name (defaults to source)"},
+			{Name: "branch-from", Short: "b", Type: "string", Description: "Parent branch for new environment"},
+			{Name: "restore-code", Type: "bool", Description: "Restore code from backup (default: true)", Default: true},
+			{Name: "wait", Short: "w", Type: "bool", Description: "Wait for restore to complete"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "object",
+			Properties: map[string]PropertySchema{
+				"id":         {Type: "string", Description: "Activity ID"},
+				"type":       {Type: "string", Description: "Activity type"},
+				"state":      {Type: "string", Description: "Activity state"},
+				"created_at": {Type: "string", Description: "Creation timestamp"},
+			},
+		},
+		Examples:  []string{"sol backup:restore backup123 --project abc123 --environment main", "sol backup:restore backup123 --target staging --wait"},
+		ExitCodes: defaultExitCodes,
+	},
+	"backup:delete": {
+		Command:     "backup:delete",
+		Description: "Delete a backup",
+		Arguments: []ArgumentSchema{
+			{Name: "backup_id", Type: "string", Description: "Backup ID to delete", Required: true},
+			{Name: "environment_id", Type: "string", Description: "Environment ID (optional if --environment set)", Required: false},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "object",
+			Properties: map[string]PropertySchema{
+				"deleted":   {Type: "boolean", Description: "Whether deletion succeeded"},
+				"backup_id": {Type: "string", Description: "Deleted backup ID"},
+			},
+		},
+		Examples:  []string{"sol backup:delete backup123 --project abc123 --environment main"},
+		ExitCodes: defaultExitCodes,
+	},
 }
 
 // GetCommandSchema returns the schema for a command, or nil if not found.

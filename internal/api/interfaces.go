@@ -54,14 +54,24 @@ type DeploymentAPI interface {
 	GetRelationships(ctx context.Context, projectID, envID, appName string) ([]Relationship, error)
 }
 
+// BackupAPI defines backup-related API operations.
+type BackupAPI interface {
+	ListBackups(ctx context.Context, projectID, envID string) ([]Backup, error)
+	GetBackup(ctx context.Context, projectID, envID, backupID string) (*Backup, error)
+	CreateBackup(ctx context.Context, projectID, envID string, safe bool) (*Activity, error)
+	RestoreBackup(ctx context.Context, projectID, envID, backupID string, input RestoreBackupInput) (*Activity, error)
+	DeleteBackup(ctx context.Context, projectID, envID, backupID string) error
+}
+
 // API is the full interface for all API operations.
-// It composes ProjectAPI, EnvironmentAPI, ActivityAPI, VariableAPI, and DeploymentAPI interfaces.
+// It composes all domain-specific API interfaces.
 type API interface {
 	ProjectAPI
 	EnvironmentAPI
 	ActivityAPI
 	VariableAPI
 	DeploymentAPI
+	BackupAPI
 }
 
 // Verify Client implements API at compile time.

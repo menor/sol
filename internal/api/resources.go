@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"sort"
 )
 
 // ResourceAllocation represents the resource allocation for services in an environment.
@@ -43,7 +44,7 @@ type ServiceResourceSummary struct {
 	InstanceCount int    `json:"instance_count,omitempty"`
 }
 
-// ToSummary converts ResourceAllocation to ResourceSummary.
+// ToSummary converts ResourceAllocation to ResourceSummary with deterministic ordering.
 func (r ResourceAllocation) ToSummary() ResourceSummary {
 	summary := ResourceSummary{}
 
@@ -73,6 +74,17 @@ func (r ResourceAllocation) ToSummary() ResourceSummary {
 			InstanceCount: svc.InstanceCount,
 		})
 	}
+
+	// Sort for deterministic output
+	sort.Slice(summary.Apps, func(i, j int) bool {
+		return summary.Apps[i].Name < summary.Apps[j].Name
+	})
+	sort.Slice(summary.Services, func(i, j int) bool {
+		return summary.Services[i].Name < summary.Services[j].Name
+	})
+	sort.Slice(summary.Workers, func(i, j int) bool {
+		return summary.Workers[i].Name < summary.Workers[j].Name
+	})
 
 	return summary
 }

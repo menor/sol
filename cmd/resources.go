@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"sort"
-
 	"github.com/menor/sol/internal/api"
 	"github.com/menor/sol/internal/errors"
 )
@@ -39,21 +37,8 @@ func (c *ResourcesGetCmd) Run(ctx *Context) error {
 		return ctx.Output(resources)
 	}
 
-	// Return lean summary with deterministic order
-	summary := resources.ToSummary()
-
-	// Sort for deterministic output
-	sort.Slice(summary.Apps, func(i, j int) bool {
-		return summary.Apps[i].Name < summary.Apps[j].Name
-	})
-	sort.Slice(summary.Services, func(i, j int) bool {
-		return summary.Services[i].Name < summary.Services[j].Name
-	})
-	sort.Slice(summary.Workers, func(i, j int) bool {
-		return summary.Workers[i].Name < summary.Workers[j].Name
-	})
-
-	return ctx.Output(summary)
+	// Return lean summary (sorting handled in ToSummary)
+	return ctx.Output(resources.ToSummary())
 }
 
 // ResourcesSetCmd updates resource allocation for an environment.

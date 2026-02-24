@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"sort"
 )
 
 // ProjectUserAccess represents a user's access to a project.
@@ -57,6 +58,11 @@ func (c *Client) ListProjectUsers(ctx context.Context, projectID string) ([]Proj
 			}
 		}
 	}
+
+	// Sort for deterministic output
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].Email < users[j].Email
+	})
 
 	return users, nil
 }

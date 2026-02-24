@@ -63,6 +63,23 @@ type BackupAPI interface {
 	DeleteBackup(ctx context.Context, projectID, envID, backupID string) error
 }
 
+// OrganizationAPI defines organization-related API operations.
+type OrganizationAPI interface {
+	ListOrganizations(ctx context.Context) ([]Organization, error)
+	GetOrganization(ctx context.Context, orgID string) (*Organization, error)
+}
+
+// UserAPI defines user access-related API operations.
+type UserAPI interface {
+	ListProjectUsers(ctx context.Context, projectID string) ([]ProjectUserAccess, error)
+}
+
+// ResourceAPI defines resource allocation API operations.
+type ResourceAPI interface {
+	GetResources(ctx context.Context, projectID, envID string) (*ResourceAllocation, error)
+	SetResources(ctx context.Context, projectID, envID string, input SetResourcesInput) (*Activity, error)
+}
+
 // API is the full interface for all API operations.
 // It composes all domain-specific API interfaces.
 type API interface {
@@ -72,6 +89,9 @@ type API interface {
 	VariableAPI
 	DeploymentAPI
 	BackupAPI
+	OrganizationAPI
+	UserAPI
+	ResourceAPI
 }
 
 // Verify Client implements API at compile time.

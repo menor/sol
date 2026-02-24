@@ -729,6 +729,116 @@ var commandSchemas = map[string]CommandSchema{
 		Examples:  []string{"sol backup:delete backup123 --project abc123 --environment main"},
 		ExitCodes: defaultExitCodes,
 	},
+	"organization:list": {
+		Command:     "organization:list",
+		Description: "List organizations for the current user",
+		Flags: []FlagSchema{
+			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (owner, country, capabilities)"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "array",
+			Items: &OutputSchema{
+				Type: "object",
+				Properties: map[string]PropertySchema{
+					"id":    {Type: "string", Description: "Organization ID"},
+					"name":  {Type: "string", Description: "Organization name (slug)"},
+					"label": {Type: "string", Description: "Organization display label"},
+				},
+			},
+		},
+		Examples:  []string{"sol organization:list", "sol organization:list --full"},
+		ExitCodes: defaultExitCodes,
+	},
+	"organization:info": {
+		Command:     "organization:info",
+		Description: "Show details for an organization",
+		Arguments: []ArgumentSchema{
+			{Name: "org_id", Type: "string", Description: "Organization ID", Required: true},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "object",
+			Properties: map[string]PropertySchema{
+				"id":           {Type: "string", Description: "Organization ID"},
+				"name":         {Type: "string", Description: "Organization name (slug)"},
+				"label":        {Type: "string", Description: "Organization display label"},
+				"owner":        {Type: "string", Description: "Owner user ID"},
+				"country":      {Type: "string", Description: "Country code"},
+				"capabilities": {Type: "array", Description: "Organization capabilities"},
+			},
+		},
+		Examples:  []string{"sol organization:info org123"},
+		ExitCodes: defaultExitCodes,
+	},
+	"user:list": {
+		Command:     "user:list",
+		Description: "List users with access to a project",
+		Flags: []FlagSchema{
+			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (permissions)"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "array",
+			Items: &OutputSchema{
+				Type: "object",
+				Properties: map[string]PropertySchema{
+					"user_id": {Type: "string", Description: "User ID"},
+					"email":   {Type: "string", Description: "User email"},
+					"role":    {Type: "string", Description: "User role"},
+				},
+			},
+		},
+		Examples:  []string{"sol user:list --project abc123", "sol user:list -p abc123 --full"},
+		ExitCodes: defaultExitCodes,
+	},
+	"resources:get": {
+		Command:     "resources:get",
+		Description: "Show resource allocation for an environment",
+		Arguments: []ArgumentSchema{
+			{Name: "environment_id", Type: "string", Description: "Environment ID (optional if --environment set)", Required: false},
+		},
+		Flags: []FlagSchema{
+			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (memory ratios, profile details)"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "object",
+			Properties: map[string]PropertySchema{
+				"apps":     {Type: "array", Description: "Application resource allocations"},
+				"services": {Type: "array", Description: "Service resource allocations"},
+				"workers":  {Type: "array", Description: "Worker resource allocations"},
+			},
+		},
+		Examples:  []string{"sol resources:get --project abc123 --environment main", "sol resources:get -p abc123 -e main --full"},
+		ExitCodes: defaultExitCodes,
+	},
+	"resources:set": {
+		Command:     "resources:set",
+		Description: "Update resource allocation for a service",
+		Arguments: []ArgumentSchema{
+			{Name: "environment_id", Type: "string", Description: "Environment ID (optional if --environment set)", Required: false},
+		},
+		Flags: []FlagSchema{
+			{Name: "service", Short: "s", Type: "string", Description: "Service name to update", Required: true},
+			{Name: "size", Type: "string", Description: "Resource size profile (e.g., S, M, L, XL)"},
+			{Name: "disk", Type: "integer", Description: "Disk size in MB"},
+			{Name: "instances", Type: "integer", Description: "Number of instances"},
+			{Name: "wait", Short: "w", Type: "bool", Description: "Wait for deployment to complete"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "object",
+			Properties: map[string]PropertySchema{
+				"id":         {Type: "string", Description: "Activity ID"},
+				"type":       {Type: "string", Description: "Activity type"},
+				"state":      {Type: "string", Description: "Activity state"},
+				"created_at": {Type: "string", Description: "Creation timestamp"},
+			},
+		},
+		Examples:  []string{"sol resources:set --service myapp --size L --project abc123 --environment main", "sol resources:set -s database --disk 2048 -p abc123 -e main --wait"},
+		ExitCodes: defaultExitCodes,
+	},
 }
 
 // GetCommandSchema returns the schema for a command, or nil if not found.

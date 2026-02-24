@@ -55,6 +55,11 @@ type CLI struct {
 	BackupCreate             BackupCreateCmd             `cmd:"" name:"backup:create" help:"Create a new backup"`
 	BackupRestore            BackupRestoreCmd            `cmd:"" name:"backup:restore" help:"Restore a backup"`
 	BackupDelete             BackupDeleteCmd             `cmd:"" name:"backup:delete" help:"Delete a backup"`
+	OrganizationList         OrganizationListCmd         `cmd:"" name:"organization:list" aliases:"organizations,org:list" help:"List organizations"`
+	OrganizationInfo         OrganizationInfoCmd         `cmd:"" name:"organization:info" aliases:"org:info" help:"Show organization details"`
+	UserList                 UserListCmd                 `cmd:"" name:"user:list" aliases:"users" help:"List users with access to a project"`
+	ResourcesGet             ResourcesGetCmd             `cmd:"" name:"resources:get" aliases:"resources" help:"Show resource allocation for an environment"`
+	ResourcesSet             ResourcesSetCmd             `cmd:"" name:"resources:set" help:"Update resource allocation for a service"`
 }
 
 // Execute parses command-line arguments and runs the appropriate command.

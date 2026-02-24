@@ -50,6 +50,17 @@ type MockClient struct {
 	RestoreBackupFunc func(ctx context.Context, projectID, envID, backupID string, input RestoreBackupInput) (*Activity, error)
 	DeleteBackupFunc  func(ctx context.Context, projectID, envID, backupID string) error
 
+	// Organization methods
+	ListOrganizationsFunc func(ctx context.Context) ([]Organization, error)
+	GetOrganizationFunc   func(ctx context.Context, orgID string) (*Organization, error)
+
+	// User methods
+	ListProjectUsersFunc func(ctx context.Context, projectID string) ([]ProjectUserAccess, error)
+
+	// Resource methods
+	GetResourcesFunc func(ctx context.Context, projectID, envID string) (*ResourceAllocation, error)
+	SetResourcesFunc func(ctx context.Context, projectID, envID string, input SetResourcesInput) (*Activity, error)
+
 	// Track calls for assertions
 	Calls []MockCall
 }
@@ -337,6 +348,51 @@ func (m *MockClient) DeleteBackup(ctx context.Context, projectID, envID, backupI
 		return m.DeleteBackupFunc(ctx, projectID, envID, backupID)
 	}
 	return nil
+}
+
+// ListOrganizations implements OrganizationAPI.
+func (m *MockClient) ListOrganizations(ctx context.Context) ([]Organization, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListOrganizations", Args: nil})
+	if m.ListOrganizationsFunc != nil {
+		return m.ListOrganizationsFunc(ctx)
+	}
+	return nil, nil
+}
+
+// GetOrganization implements OrganizationAPI.
+func (m *MockClient) GetOrganization(ctx context.Context, orgID string) (*Organization, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetOrganization", Args: []any{orgID}})
+	if m.GetOrganizationFunc != nil {
+		return m.GetOrganizationFunc(ctx, orgID)
+	}
+	return nil, nil
+}
+
+// ListProjectUsers implements UserAPI.
+func (m *MockClient) ListProjectUsers(ctx context.Context, projectID string) ([]ProjectUserAccess, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListProjectUsers", Args: []any{projectID}})
+	if m.ListProjectUsersFunc != nil {
+		return m.ListProjectUsersFunc(ctx, projectID)
+	}
+	return nil, nil
+}
+
+// GetResources implements ResourceAPI.
+func (m *MockClient) GetResources(ctx context.Context, projectID, envID string) (*ResourceAllocation, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetResources", Args: []any{projectID, envID}})
+	if m.GetResourcesFunc != nil {
+		return m.GetResourcesFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// SetResources implements ResourceAPI.
+func (m *MockClient) SetResources(ctx context.Context, projectID, envID string, input SetResourcesInput) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "SetResources", Args: []any{projectID, envID, input}})
+	if m.SetResourcesFunc != nil {
+		return m.SetResourcesFunc(ctx, projectID, envID, input)
+	}
+	return nil, nil
 }
 
 // Verify MockClient implements API at compile time.

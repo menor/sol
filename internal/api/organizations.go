@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"sort"
 )
 
 // Organization represents an Upsun organization.
@@ -48,6 +49,11 @@ func (c *Client) ListOrganizations(ctx context.Context) ([]Organization, error) 
 	if err := c.Get(ctx, path, &result); err != nil {
 		return nil, err
 	}
+
+	// Sort for deterministic output
+	sort.Slice(result.Items, func(i, j int) bool {
+		return result.Items[i].Name < result.Items[j].Name
+	})
 
 	return result.Items, nil
 }

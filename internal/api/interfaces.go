@@ -19,6 +19,8 @@ type EnvironmentAPI interface {
 	DeleteEnvironment(ctx context.Context, projectID, environmentID string) error
 	RedeployEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error)
 	BranchEnvironment(ctx context.Context, projectID, parentEnvID string, input *BranchInput) (*Activity, error)
+	MergeEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error)
+	SyncEnvironment(ctx context.Context, projectID, environmentID string, input *SyncInput) (*Activity, error)
 }
 
 // ActivityAPI defines the activity-related API operations.
@@ -80,6 +82,27 @@ type ResourceAPI interface {
 	SetResources(ctx context.Context, projectID, envID string, input SetResourcesInput) (*Activity, error)
 }
 
+// IntegrationAPI defines integration-related API operations.
+type IntegrationAPI interface {
+	ListIntegrations(ctx context.Context, projectID string, opts ListIntegrationsOptions) ([]Integration, error)
+	GetIntegration(ctx context.Context, projectID, integrationID string) (*Integration, error)
+}
+
+// DomainAPI defines domain-related API operations.
+type DomainAPI interface {
+	ListDomains(ctx context.Context, projectID string) ([]Domain, error)
+}
+
+// CertificateAPI defines certificate-related API operations.
+type CertificateAPI interface {
+	ListCertificates(ctx context.Context, projectID string) ([]Certificate, error)
+}
+
+// SSHKeyAPI defines SSH key-related API operations.
+type SSHKeyAPI interface {
+	ListSSHKeys(ctx context.Context) ([]SSHKey, error)
+}
+
 // API is the full interface for all API operations.
 // It composes all domain-specific API interfaces.
 type API interface {
@@ -92,6 +115,10 @@ type API interface {
 	OrganizationAPI
 	UserAPI
 	ResourceAPI
+	IntegrationAPI
+	DomainAPI
+	CertificateAPI
+	SSHKeyAPI
 }
 
 // Verify Client implements API at compile time.

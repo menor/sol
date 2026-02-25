@@ -839,6 +839,157 @@ var commandSchemas = map[string]CommandSchema{
 		Examples:  []string{"sol resources:set --service myapp --size L --project abc123 --environment main", "sol resources:set -s database --disk 2048 -p abc123 -e main --wait"},
 		ExitCodes: defaultExitCodes,
 	},
+	"integration:list": {
+		Command:     "integration:list",
+		Description: "List integrations for a project",
+		Flags: []FlagSchema{
+			{Name: "type", Short: "t", Type: "string", Description: "Filter by integration type (github, gitlab, webhook, etc.)"},
+			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (configuration details)"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "array",
+			Items: &OutputSchema{
+				Type: "object",
+				Properties: map[string]PropertySchema{
+					"id":   {Type: "string", Description: "Integration ID"},
+					"type": {Type: "string", Description: "Integration type"},
+				},
+			},
+		},
+		Examples:  []string{"sol integration:list --project abc123", "sol integration:list -p abc123 --type github", "sol integration:list -p abc123 --full"},
+		ExitCodes: defaultExitCodes,
+	},
+	"integration:get": {
+		Command:     "integration:get",
+		Description: "Show details for a specific integration",
+		Arguments: []ArgumentSchema{
+			{Name: "integration_id", Type: "string", Description: "Integration ID", Required: true},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "object",
+			Properties: map[string]PropertySchema{
+				"id":         {Type: "string", Description: "Integration ID"},
+				"type":       {Type: "string", Description: "Integration type"},
+				"created_at": {Type: "string", Description: "Creation timestamp"},
+				"repository": {Type: "string", Description: "Repository URL (for VCS integrations)"},
+				"url":        {Type: "string", Description: "Webhook URL (for webhook integrations)"},
+			},
+		},
+		Examples:  []string{"sol integration:get int123 --project abc123"},
+		ExitCodes: defaultExitCodes,
+	},
+	"environment:merge": {
+		Command:     "environment:merge",
+		Description: "Merge an environment into its parent",
+		Arguments: []ArgumentSchema{
+			{Name: "environment_id", Type: "string", Description: "Environment ID (optional if --environment set)", Required: false},
+		},
+		Flags: []FlagSchema{
+			{Name: "wait", Short: "w", Type: "bool", Description: "Wait for activity to complete"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "object",
+			Properties: map[string]PropertySchema{
+				"id":         {Type: "string", Description: "Activity ID"},
+				"type":       {Type: "string", Description: "Activity type"},
+				"state":      {Type: "string", Description: "Activity state"},
+				"created_at": {Type: "string", Description: "Creation timestamp"},
+			},
+		},
+		Examples:  []string{"sol environment:merge feature-x --project abc123", "sol environment:merge -e feature-x -p abc123 --wait"},
+		ExitCodes: defaultExitCodes,
+	},
+	"environment:sync": {
+		Command:     "environment:sync",
+		Description: "Synchronize data and/or code from the parent environment",
+		Arguments: []ArgumentSchema{
+			{Name: "environment_id", Type: "string", Description: "Environment ID (optional if --environment set)", Required: false},
+		},
+		Flags: []FlagSchema{
+			{Name: "data", Short: "d", Type: "bool", Description: "Synchronize data from parent"},
+			{Name: "code", Short: "c", Type: "bool", Description: "Synchronize code from parent"},
+			{Name: "resources", Short: "r", Type: "bool", Description: "Synchronize resources from parent"},
+			{Name: "wait", Short: "w", Type: "bool", Description: "Wait for activity to complete"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "object",
+			Properties: map[string]PropertySchema{
+				"id":         {Type: "string", Description: "Activity ID"},
+				"type":       {Type: "string", Description: "Activity type"},
+				"state":      {Type: "string", Description: "Activity state"},
+				"created_at": {Type: "string", Description: "Creation timestamp"},
+			},
+		},
+		Examples:  []string{"sol environment:sync staging --data --project abc123", "sol environment:sync -e staging -p abc123 --data --code --wait"},
+		ExitCodes: defaultExitCodes,
+	},
+	"domain:list": {
+		Command:     "domain:list",
+		Description: "List custom domains for a project",
+		Flags: []FlagSchema{
+			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (SSL details, timestamps)"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "array",
+			Items: &OutputSchema{
+				Type: "object",
+				Properties: map[string]PropertySchema{
+					"name":       {Type: "string", Description: "Domain name"},
+					"is_default": {Type: "boolean", Description: "Whether this is the default domain"},
+				},
+			},
+		},
+		Examples:  []string{"sol domain:list --project abc123", "sol domain:list -p abc123 --full"},
+		ExitCodes: defaultExitCodes,
+	},
+	"certificate:list": {
+		Command:     "certificate:list",
+		Description: "List SSL certificates for a project",
+		Flags: []FlagSchema{
+			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (issuer, chain, timestamps)"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "array",
+			Items: &OutputSchema{
+				Type: "object",
+				Properties: map[string]PropertySchema{
+					"id":             {Type: "string", Description: "Certificate ID"},
+					"domains":        {Type: "array", Description: "Domains covered by this certificate"},
+					"expires_at":     {Type: "string", Description: "Expiration timestamp"},
+					"is_provisioned": {Type: "boolean", Description: "Whether certificate is provisioned"},
+				},
+			},
+		},
+		Examples:  []string{"sol certificate:list --project abc123", "sol certificate:list -p abc123 --full"},
+		ExitCodes: defaultExitCodes,
+	},
+	"ssh-key:list": {
+		Command:     "ssh-key:list",
+		Description: "List SSH keys for the current user",
+		Flags: []FlagSchema{
+			{Name: "full", Short: "f", Type: "bool", Description: "Include all fields (public key value, timestamps)"},
+		},
+		GlobalFlags: globalFlags,
+		Output: &OutputSchema{
+			Type: "array",
+			Items: &OutputSchema{
+				Type: "object",
+				Properties: map[string]PropertySchema{
+					"key_id":      {Type: "string", Description: "SSH key ID"},
+					"title":       {Type: "string", Description: "Key title/name"},
+					"fingerprint": {Type: "string", Description: "Key fingerprint"},
+				},
+			},
+		},
+		Examples:  []string{"sol ssh-key:list", "sol ssh-key:list --full"},
+		ExitCodes: defaultExitCodes,
+	},
 }
 
 // GetCommandSchema returns the schema for a command, or nil if not found.

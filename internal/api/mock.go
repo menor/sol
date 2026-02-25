@@ -61,6 +61,23 @@ type MockClient struct {
 	GetResourcesFunc func(ctx context.Context, projectID, envID string) (*ResourceAllocation, error)
 	SetResourcesFunc func(ctx context.Context, projectID, envID string, input SetResourcesInput) (*Activity, error)
 
+	// Environment merge/sync methods
+	MergeEnvironmentFunc func(ctx context.Context, projectID, environmentID string) (*Activity, error)
+	SyncEnvironmentFunc  func(ctx context.Context, projectID, environmentID string, input *SyncInput) (*Activity, error)
+
+	// Integration methods
+	ListIntegrationsFunc func(ctx context.Context, projectID string, opts ListIntegrationsOptions) ([]Integration, error)
+	GetIntegrationFunc   func(ctx context.Context, projectID, integrationID string) (*Integration, error)
+
+	// Domain methods
+	ListDomainsFunc func(ctx context.Context, projectID string) ([]Domain, error)
+
+	// Certificate methods
+	ListCertificatesFunc func(ctx context.Context, projectID string) ([]Certificate, error)
+
+	// SSH key methods
+	ListSSHKeysFunc func(ctx context.Context) ([]SSHKey, error)
+
 	// Track calls for assertions
 	Calls []MockCall
 }
@@ -391,6 +408,69 @@ func (m *MockClient) SetResources(ctx context.Context, projectID, envID string, 
 	m.Calls = append(m.Calls, MockCall{Method: "SetResources", Args: []any{projectID, envID, input}})
 	if m.SetResourcesFunc != nil {
 		return m.SetResourcesFunc(ctx, projectID, envID, input)
+	}
+	return nil, nil
+}
+
+// MergeEnvironment implements EnvironmentAPI.
+func (m *MockClient) MergeEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "MergeEnvironment", Args: []any{projectID, environmentID}})
+	if m.MergeEnvironmentFunc != nil {
+		return m.MergeEnvironmentFunc(ctx, projectID, environmentID)
+	}
+	return nil, nil
+}
+
+// SyncEnvironment implements EnvironmentAPI.
+func (m *MockClient) SyncEnvironment(ctx context.Context, projectID, environmentID string, input *SyncInput) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "SyncEnvironment", Args: []any{projectID, environmentID, input}})
+	if m.SyncEnvironmentFunc != nil {
+		return m.SyncEnvironmentFunc(ctx, projectID, environmentID, input)
+	}
+	return nil, nil
+}
+
+// ListIntegrations implements IntegrationAPI.
+func (m *MockClient) ListIntegrations(ctx context.Context, projectID string, opts ListIntegrationsOptions) ([]Integration, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListIntegrations", Args: []any{projectID, opts}})
+	if m.ListIntegrationsFunc != nil {
+		return m.ListIntegrationsFunc(ctx, projectID, opts)
+	}
+	return nil, nil
+}
+
+// GetIntegration implements IntegrationAPI.
+func (m *MockClient) GetIntegration(ctx context.Context, projectID, integrationID string) (*Integration, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetIntegration", Args: []any{projectID, integrationID}})
+	if m.GetIntegrationFunc != nil {
+		return m.GetIntegrationFunc(ctx, projectID, integrationID)
+	}
+	return nil, nil
+}
+
+// ListDomains implements DomainAPI.
+func (m *MockClient) ListDomains(ctx context.Context, projectID string) ([]Domain, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListDomains", Args: []any{projectID}})
+	if m.ListDomainsFunc != nil {
+		return m.ListDomainsFunc(ctx, projectID)
+	}
+	return nil, nil
+}
+
+// ListCertificates implements CertificateAPI.
+func (m *MockClient) ListCertificates(ctx context.Context, projectID string) ([]Certificate, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListCertificates", Args: []any{projectID}})
+	if m.ListCertificatesFunc != nil {
+		return m.ListCertificatesFunc(ctx, projectID)
+	}
+	return nil, nil
+}
+
+// ListSSHKeys implements SSHKeyAPI.
+func (m *MockClient) ListSSHKeys(ctx context.Context) ([]SSHKey, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListSSHKeys", Args: nil})
+	if m.ListSSHKeysFunc != nil {
+		return m.ListSSHKeysFunc(ctx)
 	}
 	return nil, nil
 }

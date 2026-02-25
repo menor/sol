@@ -255,3 +255,93 @@ func (c *EnvironmentDeleteCmd) Run(ctx *Context) error {
 		"project":     projectID,
 	})
 }
+
+// EnvironmentMergeCmd merges the current environment into its parent.
+type EnvironmentMergeCmd struct {
+	EnvironmentID string `arg:"" optional:"" help:"Environment ID (uses --environment or PLATFORM_BRANCH if not specified)"`
+	Wait          bool   `help:"Wait for the activity to complete" short:"w"`
+}
+
+// Run executes the environment:merge command.
+func (c *EnvironmentMergeCmd) Run(ctx *Context) error {
+	projectID, err := ctx.RequireProjectID()
+	if err != nil {
+		return err
+	}
+
+	envID, err := ctx.ResolveEnvironmentID(c.EnvironmentID)
+	if err != nil {
+		return err
+	}
+
+	client, err := ctx.APIClient()
+	if err != nil {
+		return errors.NewAuthError("failed to create API client").WithDetail("cause", err.Error())
+	}
+
+	activity, err := client.MergeEnvironment(ctx, projectID, envID)
+	if err != nil {
+		return handleAPIError(err, "environment", envID)
+	}
+
+	if c.Wait && activity != nil {
+		activity, err = ctx.WaitForActivity(client, projectID, activity.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return ctx.Output(activity)
+}
+
+// EnvironmentSyncCmd synchronizes data and/or code from the parent environment.
+type EnvironmentSyncCmd struct {
+	EnvironmentID string `arg:"" optional:"" help:"Environment ID (uses --environment or PLATFORM_BRANCH if not specified)"`
+	Data          bool   `help:"Synchronize data from parent" short:"d"`
+	Code          bool   `help:"Synchronize code from parent" short:"c"`
+	Resources     bool   `help:"Synchronize resources from parent" short:"r"`
+	Wait          bool   `help:"Wait for the activity to complete" short:"w"`
+}
+
+// Run executes the environment:sync command.
+func (c *EnvironmentSyncCmd) Run(ctx *Context) error {
+	projectID, err := ctx.RequireProjectID()
+	if err != nil {
+		return err
+	}
+
+	envID, err := ctx.ResolveEnvironmentID(c.EnvironmentID)
+	if err != nil {
+		return err
+	}
+
+	// At least one of data, code, or resources must be specified
+	if !c.Data && !c.Code && !c.Resources {
+		return errors.NewValidationError("at least one of --data, --code, or --resources must be specified")
+	}
+
+	client, err := ctx.APIClient()
+	if err != nil {
+		return errors.NewAuthError("failed to create API client").WithDetail("cause", err.Error())
+	}
+
+	input := &api.SyncInput{
+		SynchronizeData:      c.Data,
+		SynchronizeCode:      c.Code,
+		SynchronizeResources: c.Resources,
+	}
+
+	activity, err := client.SyncEnvironment(ctx, projectID, envID, input)
+	if err != nil {
+		return handleAPIError(err, "environment", envID)
+	}
+
+	if c.Wait && activity != nil {
+		activity, err = ctx.WaitForActivity(client, projectID, activity.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return ctx.Output(activity)
+}

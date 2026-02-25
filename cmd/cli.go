@@ -60,6 +60,13 @@ type CLI struct {
 	UserList                 UserListCmd                 `cmd:"" name:"user:list" aliases:"users" help:"List users with access to a project"`
 	ResourcesGet             ResourcesGetCmd             `cmd:"" name:"resources:get" aliases:"resources" help:"Show resource allocation for an environment"`
 	ResourcesSet             ResourcesSetCmd             `cmd:"" name:"resources:set" help:"Update resource allocation for a service"`
+	IntegrationList          IntegrationListCmd          `cmd:"" name:"integration:list" aliases:"integrations,int:list" help:"List integrations for a project"`
+	IntegrationGet           IntegrationGetCmd           `cmd:"" name:"integration:get" aliases:"int:get" help:"Show integration details"`
+	EnvironmentMerge         EnvironmentMergeCmd         `cmd:"" name:"environment:merge" aliases:"env:merge" help:"Merge an environment into its parent"`
+	EnvironmentSync          EnvironmentSyncCmd          `cmd:"" name:"environment:sync" aliases:"env:sync" help:"Sync data/code from parent environment"`
+	DomainList               DomainListCmd               `cmd:"" name:"domain:list" aliases:"domains" help:"List custom domains for a project"`
+	CertificateList          CertificateListCmd          `cmd:"" name:"certificate:list" aliases:"certificates,certs" help:"List SSL certificates for a project"`
+	SSHKeyList               SSHKeyListCmd               `cmd:"" name:"ssh-key:list" aliases:"ssh-keys" help:"List SSH keys for the current user"`
 }
 
 // Execute parses command-line arguments and runs the appropriate command.

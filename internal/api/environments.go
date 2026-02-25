@@ -165,3 +165,44 @@ func (c *Client) RedeployEnvironment(ctx context.Context, projectID, environment
 	}
 	return &resp.Embedded.Activities[0], nil
 }
+
+// MergeEnvironment merges the current environment into its parent.
+// The environment must have a parent to merge into.
+// Returns the activity triggered by the merge operation.
+func (c *Client) MergeEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error) {
+	var resp embeddedActivitiesResponse
+	path := fmt.Sprintf("/projects/%s/environments/%s/merge",
+		url.PathEscape(projectID),
+		url.PathEscape(environmentID))
+	if err := c.Post(ctx, path, nil, &resp); err != nil {
+		return nil, err
+	}
+	if len(resp.Embedded.Activities) == 0 {
+		return nil, &APIError{Message: "no activity returned from API"}
+	}
+	return &resp.Embedded.Activities[0], nil
+}
+
+// SyncInput is the request body for synchronizing an environment.
+type SyncInput struct {
+	SynchronizeData      bool `json:"synchronize_data"`
+	SynchronizeCode      bool `json:"synchronize_code"`
+	SynchronizeResources bool `json:"synchronize_resources,omitempty"`
+}
+
+// SyncEnvironment synchronizes data and/or code from the parent environment.
+// At least one of data, code, or resources must be true.
+// Returns the activity triggered by the sync operation.
+func (c *Client) SyncEnvironment(ctx context.Context, projectID, environmentID string, input *SyncInput) (*Activity, error) {
+	var resp embeddedActivitiesResponse
+	path := fmt.Sprintf("/projects/%s/environments/%s/synchronize",
+		url.PathEscape(projectID),
+		url.PathEscape(environmentID))
+	if err := c.Post(ctx, path, input, &resp); err != nil {
+		return nil, err
+	}
+	if len(resp.Embedded.Activities) == 0 {
+		return nil, &APIError{Message: "no activity returned from API"}
+	}
+	return &resp.Embedded.Activities[0], nil
+}

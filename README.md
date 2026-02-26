@@ -15,6 +15,20 @@ Sol is a minimal CLI optimized for AI code agents. It provides:
 
 ## Installation
 
+### Download Binary
+
+Download the latest release from [GitHub Releases](https://github.com/menor/sol/releases/latest).
+
+Available for macOS, Linux, and Windows (amd64 and arm64).
+
+```bash
+# Extract and install (macOS/Linux)
+tar -xzf sol_*.tar.gz
+sudo mv sol /usr/local/bin/
+```
+
+### Build from Source
+
 ```bash
 go install github.com/menor/sol@latest
 ```
@@ -264,4 +278,4 @@ Sol means "sun" in Catalan, Spanish, and Latin. It connects to Upsun and represe
 
 ## License
 
-Copyright (c) 2026 Jose Menor. All rights reserved.
+MIT License. See [LICENSE](LICENSE) for details.

@@ -37,17 +37,15 @@ func (d Domain) ToSummary() DomainSummary {
 func (c *Client) ListDomains(ctx context.Context, projectID string) ([]Domain, error) {
 	path := fmt.Sprintf("/projects/%s/domains", url.PathEscape(projectID))
 
-	var result struct {
-		Items []Domain `json:"items"`
-	}
-	if err := c.Get(ctx, path, &result); err != nil {
+	var domains []Domain
+	if err := c.Get(ctx, path, &domains); err != nil {
 		return nil, err
 	}
 
 	// Sort for deterministic output
-	sort.Slice(result.Items, func(i, j int) bool {
-		return result.Items[i].Name < result.Items[j].Name
+	sort.Slice(domains, func(i, j int) bool {
+		return domains[i].Name < domains[j].Name
 	})
 
-	return result.Items, nil
+	return domains, nil
 }

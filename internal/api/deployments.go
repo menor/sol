@@ -51,13 +51,19 @@ type RouteSummary struct {
 	To       string `json:"to,omitempty"`
 }
 
+// RelationshipDef defines a relationship to a service.
+type RelationshipDef struct {
+	Service  string `json:"service"`
+	Endpoint string `json:"endpoint,omitempty"`
+}
+
 // Webapp represents an application container.
 type Webapp struct {
-	Type          string              `json:"type"`
-	Size          string              `json:"size,omitempty"`
-	Disk          int                 `json:"disk,omitempty"`
-	Mounts        map[string]Mount    `json:"mounts,omitempty"`
-	Relationships map[string][]string `json:"relationships,omitempty"`
+	Type          string                     `json:"type"`
+	Size          string                     `json:"size,omitempty"`
+	Disk          int                        `json:"disk,omitempty"`
+	Mounts        map[string]Mount           `json:"mounts,omitempty"`
+	Relationships map[string]RelationshipDef `json:"relationships,omitempty"`
 }
 
 // Worker represents a background worker process.
@@ -188,15 +194,13 @@ func (c *Client) GetRelationships(ctx context.Context, projectID, envID, appName
 		if appName != "" && app != appName {
 			continue
 		}
-		for name, endpoints := range webapp.Relationships {
-			for _, endpoint := range endpoints {
-				relationships = append(relationships, Relationship{
-					App:      app,
-					Name:     name,
-					Service:  endpoint,
-					Endpoint: endpoint,
-				})
-			}
+		for name, relDef := range webapp.Relationships {
+			relationships = append(relationships, Relationship{
+				App:      app,
+				Name:     name,
+				Service:  relDef.Service,
+				Endpoint: relDef.Endpoint,
+			})
 		}
 	}
 

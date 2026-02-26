@@ -82,7 +82,7 @@ echo ""
 section "Authentication"
 # =============================================================================
 
-if $SOL auth:info | grep -q '"authenticated": true'; then
+if $SOL auth:info -o json | grep -q '"authenticated": true'; then
     pass "auth:info - authenticated"
 else
     echo ""
@@ -152,7 +152,7 @@ else
 fi
 
 # Get first environment for further tests
-ENV=$($SOL environment:list --project "$PROJECT" 2>/dev/null | jq -r '.[0].id // empty')
+ENV=$($SOL environment:list --project "$PROJECT" -o json 2>/dev/null | jq -r '.[0].id // empty')
 if [ -n "$ENV" ]; then
     if $SOL environment:info "$ENV" --project "$PROJECT" > /dev/null 2>&1; then
         pass "environment:info ($ENV)"
@@ -179,8 +179,14 @@ else
     fail "activity:list --state filter"
 fi
 
+if $SOL activity:list --project "$PROJECT" --result success --limit 1 > /dev/null 2>&1; then
+    pass "activity:list --result filter"
+else
+    fail "activity:list --result filter"
+fi
+
 # Get an activity ID for log test
-ACTIVITY_ID=$($SOL activity:list --project "$PROJECT" --limit 1 2>/dev/null | jq -r '.[0].id // empty')
+ACTIVITY_ID=$($SOL activity:list --project "$PROJECT" --limit 1 -o json 2>/dev/null | jq -r '.[0].id // empty')
 if [ -n "$ACTIVITY_ID" ]; then
     if $SOL activity:log "$ACTIVITY_ID" --project "$PROJECT" > /dev/null 2>&1; then
         pass "activity:log"
@@ -240,6 +246,220 @@ else
 fi
 
 # =============================================================================
+section "Observability Commands"
+# =============================================================================
+
+if [ -n "$ENV" ]; then
+    # Service list
+    if $SOL service:list --project "$PROJECT" --environment "$ENV" > /dev/null 2>&1; then
+        pass "service:list"
+    else
+        fail "service:list"
+    fi
+
+    # App list
+    if $SOL app:list --project "$PROJECT" --environment "$ENV" > /dev/null 2>&1; then
+        pass "app:list"
+    else
+        fail "app:list"
+    fi
+
+    # Route list
+    if $SOL route:list --project "$PROJECT" --environment "$ENV" > /dev/null 2>&1; then
+        pass "route:list"
+    else
+        fail "route:list"
+    fi
+
+    # Environment URL
+    if $SOL environment:url --project "$PROJECT" --environment "$ENV" > /dev/null 2>&1; then
+        pass "environment:url"
+    else
+        fail "environment:url"
+    fi
+
+    # Environment relationships
+    if $SOL environment:relationships --project "$PROJECT" --environment "$ENV" > /dev/null 2>&1; then
+        pass "environment:relationships"
+    else
+        fail "environment:relationships"
+    fi
+else
+    skip "service:list - no environment found"
+    skip "app:list - no environment found"
+    skip "route:list - no environment found"
+    skip "environment:url - no environment found"
+    skip "environment:relationships - no environment found"
+fi
+
+# =============================================================================
+section "App Configuration"
+# =============================================================================
+
+# app:config-validate requires being in a project directory with .upsun/config.yaml
+# Test that the command parses correctly with --help
+if $SOL app:config-validate --help > /dev/null 2>&1; then
+    pass "app:config-validate --help"
+else
+    fail "app:config-validate --help"
+fi
+
+# =============================================================================
+section "Backups"
+# =============================================================================
+
+if [ -n "$ENV" ]; then
+    # List backups
+    if $SOL backup:list --project "$PROJECT" --environment "$ENV" > /dev/null 2>&1; then
+        pass "backup:list"
+    else
+        fail "backup:list"
+    fi
+
+    # Get a backup ID for get test (if any exist)
+    BACKUP_ID=$($SOL backup:list --project "$PROJECT" --environment "$ENV" -o json 2>/dev/null | jq -r '.[0].id // empty')
+    if [ -n "$BACKUP_ID" ]; then
+        if $SOL backup:get "$BACKUP_ID" --project "$PROJECT" --environment "$ENV" > /dev/null 2>&1; then
+            pass "backup:get"
+        else
+            fail "backup:get"
+        fi
+    else
+        skip "backup:get - no backups exist"
+    fi
+
+    # Test backup:create with --help (actual backup creation is slow and costs resources)
+    if $SOL backup:create --help > /dev/null 2>&1; then
+        pass "backup:create --help"
+    else
+        fail "backup:create --help"
+    fi
+
+    # Test backup:restore with --help (destructive operation)
+    if $SOL backup:restore --help > /dev/null 2>&1; then
+        pass "backup:restore --help"
+    else
+        fail "backup:restore --help"
+    fi
+
+    # Test backup:delete with --help (destructive operation)
+    if $SOL backup:delete --help > /dev/null 2>&1; then
+        pass "backup:delete --help"
+    else
+        fail "backup:delete --help"
+    fi
+else
+    skip "backup:list - no environment found"
+    skip "backup:get - no environment found"
+    skip "backup:create --help"
+    skip "backup:restore --help"
+    skip "backup:delete --help"
+fi
+
+# =============================================================================
+section "Organizations & Users"
+# =============================================================================
+
+# Organization list
+if $SOL organization:list > /dev/null 2>&1; then
+    pass "organization:list"
+else
+    fail "organization:list"
+fi
+
+# Get first organization ID for info test
+ORG_ID=$($SOL organization:list -o json 2>/dev/null | jq -r '.[0].id // empty')
+if [ -n "$ORG_ID" ]; then
+    if $SOL organization:info "$ORG_ID" > /dev/null 2>&1; then
+        pass "organization:info"
+    else
+        fail "organization:info"
+    fi
+else
+    skip "organization:info - no organizations found"
+fi
+
+# User list (requires project)
+if $SOL user:list --project "$PROJECT" > /dev/null 2>&1; then
+    pass "user:list"
+else
+    fail "user:list"
+fi
+
+# =============================================================================
+section "Resources"
+# =============================================================================
+
+if [ -n "$ENV" ]; then
+    if $SOL resources:get --project "$PROJECT" --environment "$ENV" > /dev/null 2>&1; then
+        pass "resources:get"
+    else
+        fail "resources:get"
+    fi
+
+    # resources:set is dangerous, just test --help
+    if $SOL resources:set --help > /dev/null 2>&1; then
+        pass "resources:set --help"
+    else
+        fail "resources:set --help"
+    fi
+else
+    skip "resources:get - no environment found"
+    skip "resources:set --help"
+fi
+
+# =============================================================================
+section "Integrations"
+# =============================================================================
+
+# Integration list
+if $SOL integration:list --project "$PROJECT" > /dev/null 2>&1; then
+    pass "integration:list"
+else
+    fail "integration:list"
+fi
+
+# Get first integration ID for get test (if any exist)
+INTEGRATION_ID=$($SOL integration:list --project "$PROJECT" -o json 2>/dev/null | jq -r '.[0].id // empty')
+if [ -n "$INTEGRATION_ID" ]; then
+    if $SOL integration:get "$INTEGRATION_ID" --project "$PROJECT" > /dev/null 2>&1; then
+        pass "integration:get"
+    else
+        fail "integration:get"
+    fi
+else
+    skip "integration:get - no integrations configured"
+fi
+
+# =============================================================================
+section "Domains & Certificates"
+# =============================================================================
+
+# Domain list
+if $SOL domain:list --project "$PROJECT" > /dev/null 2>&1; then
+    pass "domain:list"
+else
+    fail "domain:list"
+fi
+
+# Certificate list
+if $SOL certificate:list --project "$PROJECT" > /dev/null 2>&1; then
+    pass "certificate:list"
+else
+    fail "certificate:list"
+fi
+
+# =============================================================================
+section "SSH Keys"
+# =============================================================================
+
+if $SOL ssh-key:list > /dev/null 2>&1; then
+    pass "ssh-key:list"
+else
+    fail "ssh-key:list"
+fi
+
+# =============================================================================
 section "Deployment Commands"
 # =============================================================================
 
@@ -274,10 +494,22 @@ else
     fail "push --help"
 fi
 
+if $SOL environment:merge --help > /dev/null 2>&1; then
+    pass "environment:merge --help"
+else
+    fail "environment:merge --help"
+fi
+
+if $SOL environment:sync --help > /dev/null 2>&1; then
+    pass "environment:sync --help"
+else
+    fail "environment:sync --help"
+fi
+
 # Test redeploy on main environment (safe operation)
 if [ -n "$ENV" ]; then
     echo "Testing redeploy on $ENV (this may take a moment)..."
-    REDEPLOY_OUTPUT=$($SOL redeploy --project "$PROJECT" --environment "$ENV" 2>&1)
+    REDEPLOY_OUTPUT=$($SOL redeploy --project "$PROJECT" --environment "$ENV" -o json 2>&1)
     if echo "$REDEPLOY_OUTPUT" | grep -q '"type": "environment.redeploy"'; then
         ACTIVITY_ID=$(echo "$REDEPLOY_OUTPUT" | jq -r '.id // empty')
         pass "redeploy (activity: $ACTIVITY_ID)"
@@ -292,7 +524,7 @@ fi
 # Test activate/deactivate cycle on a non-main environment
 # Look for smoke-test environment, create if it doesn't exist
 TEST_ENV="smoke-test"
-TEST_ENV_EXISTS=$($SOL environment:list --project "$PROJECT" 2>/dev/null | jq -r --arg env "$TEST_ENV" '[.[] | select(.id == $env)][0].id // empty')
+TEST_ENV_EXISTS=$($SOL environment:list --project "$PROJECT" -o json 2>/dev/null | jq -r --arg env "$TEST_ENV" '[.[] | select(.id == $env)][0].id // empty')
 
 if [ -z "$TEST_ENV_EXISTS" ]; then
     echo "Creating smoke-test environment (this may take a few minutes)..."
@@ -310,7 +542,7 @@ fi
 
 if [ -n "$TEST_ENV" ]; then
     # Get current status
-    ENV_STATUS=$($SOL environment:info "$TEST_ENV" --project "$PROJECT" 2>/dev/null | jq -r '.status // empty')
+    ENV_STATUS=$($SOL environment:info "$TEST_ENV" --project "$PROJECT" -o json 2>/dev/null | jq -r '.status // empty')
 
     if [ "$ENV_STATUS" = "active" ]; then
         # Deactivate first, then activate
@@ -352,9 +584,21 @@ else
     skip "environment:deactivate - no non-production environment found"
 fi
 
-# Skip destructive/complex tests
+# Skip destructive tests
 skip "environment:delete (not tested - destructive)"
-skip "push (not tested - requires git repo setup)"
+skip "environment:merge (not tested - destructive)"
+skip "environment:sync (not tested - destructive)"
+
+# =============================================================================
+section "SSH Command"
+# =============================================================================
+
+# Test SSH help (actual SSH would require interactive session)
+if $SOL ssh --help > /dev/null 2>&1; then
+    pass "ssh --help"
+else
+    fail "ssh --help"
+fi
 
 # =============================================================================
 section "Results"

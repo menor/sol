@@ -52,14 +52,10 @@ type ListIntegrationsOptions struct {
 func (c *Client) ListIntegrations(ctx context.Context, projectID string, opts ListIntegrationsOptions) ([]Integration, error) {
 	path := fmt.Sprintf("/projects/%s/integrations", url.PathEscape(projectID))
 
-	var result struct {
-		Items []Integration `json:"items"`
-	}
-	if err := c.Get(ctx, path, &result); err != nil {
+	var integrations []Integration
+	if err := c.Get(ctx, path, &integrations); err != nil {
 		return nil, err
 	}
-
-	integrations := result.Items
 
 	// Client-side filtering by type if specified
 	if opts.Type != "" {

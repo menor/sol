@@ -20,7 +20,7 @@ type Backup struct {
 	Safe          bool       `json:"safe"`
 	Restorable    bool       `json:"restorable"`
 	Automated     bool       `json:"automated"`
-	Index         string     `json:"index,omitempty"`
+	Index         int        `json:"index,omitempty"`
 	SizeOfVolumes *int64     `json:"size_of_volumes,omitempty"`
 }
 

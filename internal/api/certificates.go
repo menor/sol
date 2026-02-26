@@ -52,17 +52,15 @@ func (c Certificate) ToSummary() CertificateSummary {
 func (c *Client) ListCertificates(ctx context.Context, projectID string) ([]Certificate, error) {
 	path := fmt.Sprintf("/projects/%s/certificates", url.PathEscape(projectID))
 
-	var result struct {
-		Items []Certificate `json:"items"`
-	}
-	if err := c.Get(ctx, path, &result); err != nil {
+	var certificates []Certificate
+	if err := c.Get(ctx, path, &certificates); err != nil {
 		return nil, err
 	}
 
 	// Sort for deterministic output
-	sort.Slice(result.Items, func(i, j int) bool {
-		return result.Items[i].ID < result.Items[j].ID
+	sort.Slice(certificates, func(i, j int) bool {
+		return certificates[i].ID < certificates[j].ID
 	})
 
-	return result.Items, nil
+	return certificates, nil
 }

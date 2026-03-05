@@ -33,6 +33,29 @@ sudo mv sol /usr/local/bin/
 go install github.com/menor/sol@latest
 ```
 
+## Claude Code Skill
+
+Use Sol with Claude Code for AI-assisted Upsun management:
+
+```bash
+npx skills add menor/sol-skill
+```
+
+Or add to your Claude Code settings:
+
+```json
+{
+  "skills": ["github:menor/sol-skill"]
+}
+```
+
+The skill enables natural language commands like:
+- "List my Upsun projects"
+- "Create a staging environment"
+- "Why did my deployment fail?"
+
+[View skill on GitHub](https://github.com/menor/sol-skill)
+
 ## Usage
 
 ### Authentication

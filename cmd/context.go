@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/menor/sol/internal/api"
+	"github.com/menor/sol/api"
 	"github.com/menor/sol/internal/errors"
 	"github.com/menor/sol/internal/output"
 )

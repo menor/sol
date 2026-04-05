@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/menor/sol/internal/api"
+	"github.com/menor/sol/api"
 )
 
 func TestEnvironmentURLCmd_Success(t *testing.T) {

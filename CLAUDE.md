@@ -288,15 +288,14 @@ Don't store `context.Context` in structs - it's an anti-pattern. Pass context to
 When a package grows to handle multiple concerns, consider splitting:
 
 ```
-internal/
-  auth/
-    auth.go           # Public API, Service struct
-    interfaces.go     # TokenStore, BrowserOpener interfaces
-    keyring.go        # KeyringStore implementation
-    store_memory.go   # MemoryStore for testing
-    oauth.go          # OAuth protocol (PKCE, URLs, exchange)
-    browser.go        # SystemBrowser implementation
-    token.go          # Token sources, refresh logic
+auth/
+  auth.go             # Public API, Service struct
+  interfaces.go       # TokenStore, BrowserOpener interfaces
+  keyring.go          # KeyringStore implementation
+  store_memory.go     # MemoryStore for testing
+  oauth.go            # OAuth protocol (PKCE, URLs, exchange)
+  browser.go          # SystemBrowser implementation
+  token.go            # Token sources, refresh logic
 ```
 
 Keep related concerns together until the package becomes unwieldy.

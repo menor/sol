@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/menor/sol/internal/api"
+	"github.com/menor/sol/api"
 )
 
 func TestVariableListCmd_ProjectLevel(t *testing.T) {

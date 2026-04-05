@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/menor/sol/internal/api"
+	"github.com/menor/sol/api"
 	"github.com/menor/sol/internal/errors"
 )
 

@@ -3,7 +3,7 @@ package cmd
 import (
 	"errors"
 
-	"github.com/menor/sol/internal/auth"
+	"github.com/menor/sol/auth"
 	clierrors "github.com/menor/sol/internal/errors"
 )
 

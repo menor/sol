@@ -1,0 +1,483 @@
+// Copyright 2026 José Menor
+// Licensed under the Apache License, Version 2.0.
+// See LICENSE and NOTICE files for details.
+
+package api
+
+import "context"
+
+// MockClient is a mock implementation of the API interface for testing.
+// Set the return values and errors before calling methods.
+type MockClient struct {
+	// Project methods
+	ListProjectsFunc func(ctx context.Context) ([]ProjectRef, error)
+	GetProjectFunc   func(ctx context.Context, projectID string) (*Project, error)
+
+	// Environment methods
+	ListEnvironmentsFunc       func(ctx context.Context, projectID string) ([]Environment, error)
+	GetEnvironmentFunc         func(ctx context.Context, projectID, environmentID string) (*Environment, error)
+	ActivateEnvironmentFunc    func(ctx context.Context, projectID, environmentID string) (*Activity, error)
+	DeactivateEnvironmentFunc  func(ctx context.Context, projectID, environmentID string) (*Activity, error)
+	DeleteEnvironmentFunc      func(ctx context.Context, projectID, environmentID string) error
+	RedeployEnvironmentFunc    func(ctx context.Context, projectID, environmentID string) (*Activity, error)
+	BranchEnvironmentFunc      func(ctx context.Context, projectID, parentEnvID string, input *BranchInput) (*Activity, error)
+
+	// Activity methods
+	ListActivitiesFunc func(ctx context.Context, projectID string, opts *ListActivitiesOptions) ([]Activity, error)
+	GetActivityFunc    func(ctx context.Context, projectID, activityID string) (*Activity, error)
+	GetActivityLogFunc func(ctx context.Context, projectID, activityID string) (string, error)
+
+	// Variable methods - Project level
+	ListProjectVariablesFunc  func(ctx context.Context, projectID string) ([]Variable, error)
+	GetProjectVariableFunc    func(ctx context.Context, projectID, name string) (*Variable, error)
+	SetProjectVariableFunc    func(ctx context.Context, projectID string, input *VariableInput) (*Variable, error)
+	DeleteProjectVariableFunc func(ctx context.Context, projectID, name string) error
+
+	// Variable methods - Environment level
+	ListEnvironmentVariablesFunc  func(ctx context.Context, projectID, envID string) ([]Variable, error)
+	GetEnvironmentVariableFunc    func(ctx context.Context, projectID, envID, name string) (*Variable, error)
+	SetEnvironmentVariableFunc    func(ctx context.Context, projectID, envID string, input *VariableInput) (*Variable, error)
+	DeleteEnvironmentVariableFunc func(ctx context.Context, projectID, envID, name string) error
+
+	// Deployment methods
+	GetCurrentDeploymentFunc func(ctx context.Context, projectID, envID string) (*Deployment, error)
+	ListServicesFunc         func(ctx context.Context, projectID, envID string) ([]ServiceSummary, error)
+	ListAppsFunc             func(ctx context.Context, projectID, envID string) ([]AppSummary, error)
+	ListRoutesFunc           func(ctx context.Context, projectID, envID string) ([]RouteSummary, error)
+	GetRoutesFunc            func(ctx context.Context, projectID, envID string) ([]RouteURL, error)
+	GetRelationshipsFunc     func(ctx context.Context, projectID, envID, appName string) ([]Relationship, error)
+
+	// Backup methods
+	ListBackupsFunc   func(ctx context.Context, projectID, envID string) ([]Backup, error)
+	GetBackupFunc     func(ctx context.Context, projectID, envID, backupID string) (*Backup, error)
+	CreateBackupFunc  func(ctx context.Context, projectID, envID string, safe bool) (*Activity, error)
+	RestoreBackupFunc func(ctx context.Context, projectID, envID, backupID string, input RestoreBackupInput) (*Activity, error)
+	DeleteBackupFunc  func(ctx context.Context, projectID, envID, backupID string) error
+
+	// Organization methods
+	ListOrganizationsFunc func(ctx context.Context) ([]Organization, error)
+	GetOrganizationFunc   func(ctx context.Context, orgID string) (*Organization, error)
+
+	// User methods
+	ListProjectUsersFunc func(ctx context.Context, projectID string) ([]ProjectUserAccess, error)
+
+	// Resource methods
+	GetResourcesFunc func(ctx context.Context, projectID, envID string) (*ResourceAllocation, error)
+	SetResourcesFunc func(ctx context.Context, projectID, envID string, input SetResourcesInput) (*Activity, error)
+
+	// Environment merge/sync methods
+	MergeEnvironmentFunc func(ctx context.Context, projectID, environmentID string) (*Activity, error)
+	SyncEnvironmentFunc  func(ctx context.Context, projectID, environmentID string, input *SyncInput) (*Activity, error)
+
+	// Integration methods
+	ListIntegrationsFunc func(ctx context.Context, projectID string, opts ListIntegrationsOptions) ([]Integration, error)
+	GetIntegrationFunc   func(ctx context.Context, projectID, integrationID string) (*Integration, error)
+
+	// Domain methods
+	ListDomainsFunc func(ctx context.Context, projectID string) ([]Domain, error)
+
+	// Certificate methods
+	ListCertificatesFunc func(ctx context.Context, projectID string) ([]Certificate, error)
+
+	// SSH key methods
+	ListSSHKeysFunc func(ctx context.Context) ([]SSHKey, error)
+
+	// Track calls for assertions
+	Calls []MockCall
+}
+
+// MockCall records a method call with its arguments.
+type MockCall struct {
+	Method string
+	Args   []any
+}
+
+// ListProjects implements ProjectAPI.
+func (m *MockClient) ListProjects(ctx context.Context) ([]ProjectRef, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListProjects", Args: nil})
+	if m.ListProjectsFunc != nil {
+		return m.ListProjectsFunc(ctx)
+	}
+	return nil, nil
+}
+
+// GetProject implements ProjectAPI.
+func (m *MockClient) GetProject(ctx context.Context, projectID string) (*Project, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetProject", Args: []any{projectID}})
+	if m.GetProjectFunc != nil {
+		return m.GetProjectFunc(ctx, projectID)
+	}
+	return nil, nil
+}
+
+// ListEnvironments implements EnvironmentAPI.
+func (m *MockClient) ListEnvironments(ctx context.Context, projectID string) ([]Environment, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListEnvironments", Args: []any{projectID}})
+	if m.ListEnvironmentsFunc != nil {
+		return m.ListEnvironmentsFunc(ctx, projectID)
+	}
+	return nil, nil
+}
+
+// GetEnvironment implements EnvironmentAPI.
+func (m *MockClient) GetEnvironment(ctx context.Context, projectID, environmentID string) (*Environment, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetEnvironment", Args: []any{projectID, environmentID}})
+	if m.GetEnvironmentFunc != nil {
+		return m.GetEnvironmentFunc(ctx, projectID, environmentID)
+	}
+	return nil, nil
+}
+
+// ActivateEnvironment implements EnvironmentAPI.
+func (m *MockClient) ActivateEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ActivateEnvironment", Args: []any{projectID, environmentID}})
+	if m.ActivateEnvironmentFunc != nil {
+		return m.ActivateEnvironmentFunc(ctx, projectID, environmentID)
+	}
+	return nil, nil
+}
+
+// DeactivateEnvironment implements EnvironmentAPI.
+func (m *MockClient) DeactivateEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "DeactivateEnvironment", Args: []any{projectID, environmentID}})
+	if m.DeactivateEnvironmentFunc != nil {
+		return m.DeactivateEnvironmentFunc(ctx, projectID, environmentID)
+	}
+	return nil, nil
+}
+
+// DeleteEnvironment implements EnvironmentAPI.
+func (m *MockClient) DeleteEnvironment(ctx context.Context, projectID, environmentID string) error {
+	m.Calls = append(m.Calls, MockCall{Method: "DeleteEnvironment", Args: []any{projectID, environmentID}})
+	if m.DeleteEnvironmentFunc != nil {
+		return m.DeleteEnvironmentFunc(ctx, projectID, environmentID)
+	}
+	return nil
+}
+
+// RedeployEnvironment implements EnvironmentAPI.
+func (m *MockClient) RedeployEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "RedeployEnvironment", Args: []any{projectID, environmentID}})
+	if m.RedeployEnvironmentFunc != nil {
+		return m.RedeployEnvironmentFunc(ctx, projectID, environmentID)
+	}
+	return nil, nil
+}
+
+// BranchEnvironment implements EnvironmentAPI.
+func (m *MockClient) BranchEnvironment(ctx context.Context, projectID, parentEnvID string, input *BranchInput) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "BranchEnvironment", Args: []any{projectID, parentEnvID, input}})
+	if m.BranchEnvironmentFunc != nil {
+		return m.BranchEnvironmentFunc(ctx, projectID, parentEnvID, input)
+	}
+	return nil, nil
+}
+
+// ListActivities implements ActivityAPI.
+func (m *MockClient) ListActivities(ctx context.Context, projectID string, opts *ListActivitiesOptions) ([]Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListActivities", Args: []any{projectID, opts}})
+	if m.ListActivitiesFunc != nil {
+		return m.ListActivitiesFunc(ctx, projectID, opts)
+	}
+	return nil, nil
+}
+
+// GetActivity implements ActivityAPI.
+func (m *MockClient) GetActivity(ctx context.Context, projectID, activityID string) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetActivity", Args: []any{projectID, activityID}})
+	if m.GetActivityFunc != nil {
+		return m.GetActivityFunc(ctx, projectID, activityID)
+	}
+	return nil, nil
+}
+
+// GetActivityLog implements ActivityAPI.
+func (m *MockClient) GetActivityLog(ctx context.Context, projectID, activityID string) (string, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetActivityLog", Args: []any{projectID, activityID}})
+	if m.GetActivityLogFunc != nil {
+		return m.GetActivityLogFunc(ctx, projectID, activityID)
+	}
+	return "", nil
+}
+
+// ListProjectVariables implements VariableAPI.
+func (m *MockClient) ListProjectVariables(ctx context.Context, projectID string) ([]Variable, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListProjectVariables", Args: []any{projectID}})
+	if m.ListProjectVariablesFunc != nil {
+		return m.ListProjectVariablesFunc(ctx, projectID)
+	}
+	return nil, nil
+}
+
+// GetProjectVariable implements VariableAPI.
+func (m *MockClient) GetProjectVariable(ctx context.Context, projectID, name string) (*Variable, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetProjectVariable", Args: []any{projectID, name}})
+	if m.GetProjectVariableFunc != nil {
+		return m.GetProjectVariableFunc(ctx, projectID, name)
+	}
+	return nil, nil
+}
+
+// SetProjectVariable implements VariableAPI.
+func (m *MockClient) SetProjectVariable(ctx context.Context, projectID string, input *VariableInput) (*Variable, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "SetProjectVariable", Args: []any{projectID, input}})
+	if m.SetProjectVariableFunc != nil {
+		return m.SetProjectVariableFunc(ctx, projectID, input)
+	}
+	return nil, nil
+}
+
+// DeleteProjectVariable implements VariableAPI.
+func (m *MockClient) DeleteProjectVariable(ctx context.Context, projectID, name string) error {
+	m.Calls = append(m.Calls, MockCall{Method: "DeleteProjectVariable", Args: []any{projectID, name}})
+	if m.DeleteProjectVariableFunc != nil {
+		return m.DeleteProjectVariableFunc(ctx, projectID, name)
+	}
+	return nil
+}
+
+// ListEnvironmentVariables implements VariableAPI.
+func (m *MockClient) ListEnvironmentVariables(ctx context.Context, projectID, envID string) ([]Variable, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListEnvironmentVariables", Args: []any{projectID, envID}})
+	if m.ListEnvironmentVariablesFunc != nil {
+		return m.ListEnvironmentVariablesFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// GetEnvironmentVariable implements VariableAPI.
+func (m *MockClient) GetEnvironmentVariable(ctx context.Context, projectID, envID, name string) (*Variable, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetEnvironmentVariable", Args: []any{projectID, envID, name}})
+	if m.GetEnvironmentVariableFunc != nil {
+		return m.GetEnvironmentVariableFunc(ctx, projectID, envID, name)
+	}
+	return nil, nil
+}
+
+// SetEnvironmentVariable implements VariableAPI.
+func (m *MockClient) SetEnvironmentVariable(ctx context.Context, projectID, envID string, input *VariableInput) (*Variable, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "SetEnvironmentVariable", Args: []any{projectID, envID, input}})
+	if m.SetEnvironmentVariableFunc != nil {
+		return m.SetEnvironmentVariableFunc(ctx, projectID, envID, input)
+	}
+	return nil, nil
+}
+
+// DeleteEnvironmentVariable implements VariableAPI.
+func (m *MockClient) DeleteEnvironmentVariable(ctx context.Context, projectID, envID, name string) error {
+	m.Calls = append(m.Calls, MockCall{Method: "DeleteEnvironmentVariable", Args: []any{projectID, envID, name}})
+	if m.DeleteEnvironmentVariableFunc != nil {
+		return m.DeleteEnvironmentVariableFunc(ctx, projectID, envID, name)
+	}
+	return nil
+}
+
+// GetCurrentDeployment implements DeploymentAPI.
+func (m *MockClient) GetCurrentDeployment(ctx context.Context, projectID, envID string) (*Deployment, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetCurrentDeployment", Args: []any{projectID, envID}})
+	if m.GetCurrentDeploymentFunc != nil {
+		return m.GetCurrentDeploymentFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// ListServices implements DeploymentAPI.
+func (m *MockClient) ListServices(ctx context.Context, projectID, envID string) ([]ServiceSummary, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListServices", Args: []any{projectID, envID}})
+	if m.ListServicesFunc != nil {
+		return m.ListServicesFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// ListApps implements DeploymentAPI.
+func (m *MockClient) ListApps(ctx context.Context, projectID, envID string) ([]AppSummary, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListApps", Args: []any{projectID, envID}})
+	if m.ListAppsFunc != nil {
+		return m.ListAppsFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// ListRoutes implements DeploymentAPI.
+func (m *MockClient) ListRoutes(ctx context.Context, projectID, envID string) ([]RouteSummary, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListRoutes", Args: []any{projectID, envID}})
+	if m.ListRoutesFunc != nil {
+		return m.ListRoutesFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// GetRoutes implements DeploymentAPI.
+func (m *MockClient) GetRoutes(ctx context.Context, projectID, envID string) ([]RouteURL, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetRoutes", Args: []any{projectID, envID}})
+	if m.GetRoutesFunc != nil {
+		return m.GetRoutesFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// GetRelationships implements DeploymentAPI.
+func (m *MockClient) GetRelationships(ctx context.Context, projectID, envID, appName string) ([]Relationship, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetRelationships", Args: []any{projectID, envID, appName}})
+	if m.GetRelationshipsFunc != nil {
+		return m.GetRelationshipsFunc(ctx, projectID, envID, appName)
+	}
+	return nil, nil
+}
+
+// ListBackups implements BackupAPI.
+func (m *MockClient) ListBackups(ctx context.Context, projectID, envID string) ([]Backup, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListBackups", Args: []any{projectID, envID}})
+	if m.ListBackupsFunc != nil {
+		return m.ListBackupsFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// GetBackup implements BackupAPI.
+func (m *MockClient) GetBackup(ctx context.Context, projectID, envID, backupID string) (*Backup, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetBackup", Args: []any{projectID, envID, backupID}})
+	if m.GetBackupFunc != nil {
+		return m.GetBackupFunc(ctx, projectID, envID, backupID)
+	}
+	return nil, nil
+}
+
+// CreateBackup implements BackupAPI.
+func (m *MockClient) CreateBackup(ctx context.Context, projectID, envID string, safe bool) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "CreateBackup", Args: []any{projectID, envID, safe}})
+	if m.CreateBackupFunc != nil {
+		return m.CreateBackupFunc(ctx, projectID, envID, safe)
+	}
+	return nil, nil
+}
+
+// RestoreBackup implements BackupAPI.
+func (m *MockClient) RestoreBackup(ctx context.Context, projectID, envID, backupID string, input RestoreBackupInput) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "RestoreBackup", Args: []any{projectID, envID, backupID, input}})
+	if m.RestoreBackupFunc != nil {
+		return m.RestoreBackupFunc(ctx, projectID, envID, backupID, input)
+	}
+	return nil, nil
+}
+
+// DeleteBackup implements BackupAPI.
+func (m *MockClient) DeleteBackup(ctx context.Context, projectID, envID, backupID string) error {
+	m.Calls = append(m.Calls, MockCall{Method: "DeleteBackup", Args: []any{projectID, envID, backupID}})
+	if m.DeleteBackupFunc != nil {
+		return m.DeleteBackupFunc(ctx, projectID, envID, backupID)
+	}
+	return nil
+}
+
+// ListOrganizations implements OrganizationAPI.
+func (m *MockClient) ListOrganizations(ctx context.Context) ([]Organization, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListOrganizations", Args: nil})
+	if m.ListOrganizationsFunc != nil {
+		return m.ListOrganizationsFunc(ctx)
+	}
+	return nil, nil
+}
+
+// GetOrganization implements OrganizationAPI.
+func (m *MockClient) GetOrganization(ctx context.Context, orgID string) (*Organization, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetOrganization", Args: []any{orgID}})
+	if m.GetOrganizationFunc != nil {
+		return m.GetOrganizationFunc(ctx, orgID)
+	}
+	return nil, nil
+}
+
+// ListProjectUsers implements UserAPI.
+func (m *MockClient) ListProjectUsers(ctx context.Context, projectID string) ([]ProjectUserAccess, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListProjectUsers", Args: []any{projectID}})
+	if m.ListProjectUsersFunc != nil {
+		return m.ListProjectUsersFunc(ctx, projectID)
+	}
+	return nil, nil
+}
+
+// GetResources implements ResourceAPI.
+func (m *MockClient) GetResources(ctx context.Context, projectID, envID string) (*ResourceAllocation, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetResources", Args: []any{projectID, envID}})
+	if m.GetResourcesFunc != nil {
+		return m.GetResourcesFunc(ctx, projectID, envID)
+	}
+	return nil, nil
+}
+
+// SetResources implements ResourceAPI.
+func (m *MockClient) SetResources(ctx context.Context, projectID, envID string, input SetResourcesInput) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "SetResources", Args: []any{projectID, envID, input}})
+	if m.SetResourcesFunc != nil {
+		return m.SetResourcesFunc(ctx, projectID, envID, input)
+	}
+	return nil, nil
+}
+
+// MergeEnvironment implements EnvironmentAPI.
+func (m *MockClient) MergeEnvironment(ctx context.Context, projectID, environmentID string) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "MergeEnvironment", Args: []any{projectID, environmentID}})
+	if m.MergeEnvironmentFunc != nil {
+		return m.MergeEnvironmentFunc(ctx, projectID, environmentID)
+	}
+	return nil, nil
+}
+
+// SyncEnvironment implements EnvironmentAPI.
+func (m *MockClient) SyncEnvironment(ctx context.Context, projectID, environmentID string, input *SyncInput) (*Activity, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "SyncEnvironment", Args: []any{projectID, environmentID, input}})
+	if m.SyncEnvironmentFunc != nil {
+		return m.SyncEnvironmentFunc(ctx, projectID, environmentID, input)
+	}
+	return nil, nil
+}
+
+// ListIntegrations implements IntegrationAPI.
+func (m *MockClient) ListIntegrations(ctx context.Context, projectID string, opts ListIntegrationsOptions) ([]Integration, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListIntegrations", Args: []any{projectID, opts}})
+	if m.ListIntegrationsFunc != nil {
+		return m.ListIntegrationsFunc(ctx, projectID, opts)
+	}
+	return nil, nil
+}
+
+// GetIntegration implements IntegrationAPI.
+func (m *MockClient) GetIntegration(ctx context.Context, projectID, integrationID string) (*Integration, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "GetIntegration", Args: []any{projectID, integrationID}})
+	if m.GetIntegrationFunc != nil {
+		return m.GetIntegrationFunc(ctx, projectID, integrationID)
+	}
+	return nil, nil
+}
+
+// ListDomains implements DomainAPI.
+func (m *MockClient) ListDomains(ctx context.Context, projectID string) ([]Domain, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListDomains", Args: []any{projectID}})
+	if m.ListDomainsFunc != nil {
+		return m.ListDomainsFunc(ctx, projectID)
+	}
+	return nil, nil
+}
+
+// ListCertificates implements CertificateAPI.
+func (m *MockClient) ListCertificates(ctx context.Context, projectID string) ([]Certificate, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListCertificates", Args: []any{projectID}})
+	if m.ListCertificatesFunc != nil {
+		return m.ListCertificatesFunc(ctx, projectID)
+	}
+	return nil, nil
+}
+
+// ListSSHKeys implements SSHKeyAPI.
+func (m *MockClient) ListSSHKeys(ctx context.Context) ([]SSHKey, error) {
+	m.Calls = append(m.Calls, MockCall{Method: "ListSSHKeys", Args: nil})
+	if m.ListSSHKeysFunc != nil {
+		return m.ListSSHKeysFunc(ctx)
+	}
+	return nil, nil
+}
+
+// Verify MockClient implements API at compile time.
+var _ API = (*MockClient)(nil)

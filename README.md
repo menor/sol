@@ -295,10 +295,21 @@ go build -o sol .
 go test ./...
 ```
 
+## Using auth and api as Libraries
+
+The `auth` and `api` packages are available for external use:
+
+```go
+import "github.com/menor/sol/auth"
+import "github.com/menor/sol/api"
+```
+
+This is a personal project maintained by José Menor. There is no SLA or guaranteed compatibility. Pin your dependency to a specific version.
+
 ## Why "Sol"?
 
 Sol means "sun" in Catalan, Spanish, and Latin. It connects to Upsun and represents light/clarity - what this CLI aims to provide for agents interacting with the platform.
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+Apache 2.0 License. See [LICENSE](LICENSE) for details.

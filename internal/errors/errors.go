@@ -7,10 +7,11 @@ import (
 
 // Exit codes
 const (
-	ExitSuccess   = 0
-	ExitUserError = 1 // Bad input, auth failed
-	ExitAPIError  = 2 // API unreachable, server error
-	ExitInternal  = 3 // Bug in CLI
+	ExitSuccess     = 0
+	ExitUserError   = 1  // Bad input, auth failed
+	ExitAPIError    = 2  // API unreachable, server error
+	ExitInternal    = 3  // Bug in CLI
+	ExitUnsupported = 64 // Feature not available in this runtime (e.g., browser)
 )
 
 // CLIError represents a structured error for agent consumption
@@ -33,6 +34,8 @@ func (e *CLIError) ExitCode() int {
 		return ExitAPIError
 	case "INTERNAL_ERROR":
 		return ExitInternal
+	case "UNSUPPORTED":
+		return ExitUnsupported
 	default:
 		return ExitUserError
 	}
@@ -122,4 +125,13 @@ func NewInternalError(message string) *CLIError {
 		Message: message,
 	}
 	return err.WithHint("This is a bug. Please report it.")
+}
+
+// NewUnsupportedError reports that a feature is unavailable in the current runtime.
+// Used by build-tag stubs (js/wasm) for capabilities like keyring, exec, or filesystem.
+func NewUnsupportedError(message string) *CLIError {
+	return &CLIError{
+		Code:    "UNSUPPORTED",
+		Message: message,
+	}
 }

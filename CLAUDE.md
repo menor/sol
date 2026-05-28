@@ -56,6 +56,23 @@ sol --schema                       # List all available commands
 
 This enables agents to discover command capabilities programmatically.
 
+### Two Build Targets: CLI + WASM
+
+Sol compiles from one source tree to two binaries:
+
+- **Native CLI** (`go build ./...`) — humans + shell agents.
+- **WASM module** (`GOOS=js GOARCH=wasm go build ./cmd/sol-wasm`) — browser agents (`@heysol/sol-wasm` npm package).
+
+~85% of files compile to both targets unchanged. The ~15% that don't (anything using `os/exec`, `go-keyring`, local FS) split into `foo.go` (`//go:build !js`) + `foo_js.go` (`//go:build js`) pairs. The `_js.go` stub keeps the same exported symbols and returns `errors.NewUnsupportedError(...)`.
+
+**Rules:**
+- Never use `if runtime.GOOS == "js"` — broken imports fail the build before any runtime check fires.
+- WASM-incompatible commands must ship as `foo.go` + `foo_js.go` pairs from day one of the phase that introduces them. Never retrofit.
+- Every command's schema declares `runtime: ["cli"]` or `["cli","wasm"]` so the browser agent can filter what it calls.
+- WASM has no env vars, no keyring, no FS. The bearer token comes from a JS callback per request.
+
+See `.claude-personal/docs/plans/wasm-port.md` and `.claude-personal/docs/plans/feature-parity.md` for the full plan.
+
 ## Upsun Documentation
 
 When you need Upsun documentation, search these sites:

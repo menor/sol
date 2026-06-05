@@ -1,17 +1,20 @@
 # Sol
 
-Agent-optimized CLI for Upsun.
+The agent toolset for Upsun.
 
 ## What is Sol?
 
-Sol is a minimal CLI optimized for AI code agents. It provides:
+Sol is the tool layer an AI agent or harness calls to operate Upsun. Most CLIs are built for humans, then bolted onto automation. Sol is built the other way around: every command is a tool an agent can discover, call, and recover from. It ships as a CLI, so humans can use it too.
 
-- **Lean output by default** - List commands return essential fields only (up to 99% smaller)
-- **TOON format by default** - Token-efficient encoding (~50% smaller than JSON)
-- **No interactive prompts** - Flags and stdin only
-- **Predictable exit codes** - 0 success, 1 user error, 2 API error, 3 internal
-- **Machine-readable errors** - Error codes and structured details
-- **JSON output** - Use `-o json` when humans need to read it
+Sol is built on five principles for agent tools:
+
+- **Schema-first** - Every command exposes `--schema`. Agents discover capabilities instead of guessing.
+- **Deterministic, token-efficient output** - TOON by default (~50% smaller than JSON), stable sort order, lean fields. Agents can diff results across turns.
+- **Structured errors** - Error codes plus recovery hints, not prose. Agents pattern-match and self-correct.
+- **Composable, single-purpose** - Each command does one thing. The agent orchestrates; the tools don't.
+- **No interactive prompts** - Flags and stdin only. Nothing blocks automation.
+
+Use `-o json` when a human needs to read the output.
 
 ## Installation
 
@@ -297,7 +300,7 @@ go test ./...
 
 ## Why "Sol"?
 
-Sol means "sun" in Catalan, Spanish, and Latin. It connects to Upsun and represents light/clarity - what this CLI aims to provide for agents interacting with the platform.
+Sol means "sun" in Catalan, Spanish, and Latin. It connects to Upsun and represents light/clarity - what this toolset aims to provide for agents operating the platform.
 
 ## License
 

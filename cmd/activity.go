@@ -31,8 +31,7 @@ type ActivityListCmd struct {
 func (c *ActivityListCmd) Run(ctx *Context) error {
 	projectID := ctx.ProjectID()
 	if projectID == "" {
-		return errors.NewValidationError("no project specified").
-			WithHint("Use --project or run from within a project directory")
+		return errors.NewNoProjectError()
 	}
 
 	client, err := ctx.APIClient()
@@ -144,8 +143,7 @@ type ActivityLogCmd struct {
 func (c *ActivityLogCmd) Run(ctx *Context) error {
 	projectID := ctx.ProjectID()
 	if projectID == "" {
-		return errors.NewValidationError("no project specified").
-			WithHint("Use --project or run from within a project directory")
+		return errors.NewNoProjectError()
 	}
 
 	client, err := ctx.APIClient()

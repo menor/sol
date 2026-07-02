@@ -25,14 +25,12 @@ type SSHCmd struct {
 func (c *SSHCmd) Run(ctx *Context) error {
 	projectID := ctx.ProjectID()
 	if projectID == "" {
-		return errors.NewValidationError("no project specified").
-			WithHint("Use --project or run from within a project directory")
+		return errors.NewNoProjectError()
 	}
 
 	envID := ctx.EnvironmentID()
 	if envID == "" {
-		return errors.NewValidationError("no environment specified").
-			WithHint("Use --environment or run from within an environment")
+		return errors.NewNoEnvironmentError()
 	}
 
 	// Validate app name to prevent SSH argument injection

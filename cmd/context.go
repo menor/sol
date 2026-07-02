@@ -80,8 +80,7 @@ func (c *Context) debugLog(format string, args ...any) {
 func (c *Context) RequireProjectID() (string, error) {
 	projectID := c.ProjectID()
 	if projectID == "" {
-		return "", errors.NewValidationError("no project specified").
-			WithHint("Use --project or run from within a project directory")
+		return "", errors.NewNoProjectError()
 	}
 	return projectID, nil
 }
@@ -94,8 +93,7 @@ func (c *Context) ResolveEnvironmentID(explicit string) (string, error) {
 	}
 	envID := c.EnvironmentID()
 	if envID == "" {
-		return "", errors.NewValidationError("no environment specified").
-			WithHint("Provide an environment ID or use --environment flag")
+		return "", errors.NewNoEnvironmentError()
 	}
 	return envID, nil
 }
@@ -121,26 +119,28 @@ func (c *Context) WaitForActivity(client api.API, projectID, activityID string) 
 		case "complete":
 			// Check result for success vs failure
 			if activity.Result == "failure" {
-				return activity, errors.NewInternalError("activity failed").
+				return activity, errors.NewOperationFailedError("activity failed").
 					WithDetail("activity_id", activityID).
 					WithDetail("result", activity.Result).
 					WithHint("Check activity:log for details")
 			}
 			return activity, nil
 		case "cancelled":
-			return activity, errors.NewValidationError("activity was cancelled").
+			return activity, errors.NewOperationFailedError("activity was cancelled").
 				WithDetail("activity_id", activityID)
 		case "failure":
-			return activity, errors.NewInternalError("activity failed").
+			return activity, errors.NewOperationFailedError("activity failed").
 				WithDetail("activity_id", activityID).
 				WithHint("Check activity:log for details")
 		}
 
 		// Check timeout
 		if time.Now().After(deadline) {
-			return activity, errors.NewValidationError("timeout waiting for activity").
+			return activity, errors.NewOperationFailedError("timeout waiting for activity").
+				WithRetryable(true).
 				WithDetail("activity_id", activityID).
-				WithDetail("state", activity.State)
+				WithDetail("state", activity.State).
+				WithHint("The activity may still be running; poll activity:get to check")
 		}
 
 		c.Log("Activity %s: %s...", activityID, activity.State)

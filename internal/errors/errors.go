@@ -5,46 +5,69 @@ import (
 	"fmt"
 )
 
-// Exit codes
+// Exit codes (ADR 0001). Callers route on these without parsing text:
+//
+//	0  ok
+//	1  operational error (has code + hint; safe to hand to an agent)
+//	70 internal / unexpected (bug, panic; do not retry blindly)
+//	80 usage / parse error (assigned by render() for Kong parse failures)
+//
+// ExitCode() never returns 80: the usage/parse case is synthesized in the
+// render chokepoint, not derived from a CLIError code.
 const (
 	ExitSuccess   = 0
-	ExitUserError = 1 // Bad input, auth failed
-	ExitAPIError  = 2 // API unreachable, server error
-	ExitInternal  = 3 // Bug in CLI
+	ExitUserError = 1
+	ExitInternal  = 70
+	ExitUsage     = 80
 )
 
-// CLIError represents a structured error for agent consumption
+// Error codes form a closed, documented set in snake_case, kept in Sol/Upsun
+// domain vocabulary (never tuned to a specific caller). This is the API a
+// machine caller branches on.
+const (
+	CodeUnauthenticated        = "unauthenticated"
+	CodeNoProjectSpecified     = "no_project_specified"
+	CodeNoEnvironmentSpecified = "no_environment_specified"
+	CodeNotFound               = "not_found"
+	CodeInvalidArgument        = "invalid_argument"
+	CodePermissionDenied       = "permission_denied"
+	CodeAPIUnavailable         = "api_unavailable"
+	CodeOperationFailed        = "operation_failed"
+	CodeInternal               = "internal"
+)
+
+// CLIError is Sol's structured error, shaped for machine consumption.
+// Envelope: {code, message, hint?, retryable, details?}. code, message, and
+// retryable are always present; hint and details are omitted when empty.
 type CLIError struct {
-	Code    string         `json:"code"`
-	Message string         `json:"message"`
-	Details map[string]any `json:"details,omitempty"`
+	Code      string         `json:"code"`
+	Message   string         `json:"message"`
+	Hint      string         `json:"hint,omitempty"`
+	Retryable bool           `json:"retryable"`
+	Details   map[string]any `json:"details,omitempty"`
 }
 
 func (e *CLIError) Error() string {
 	return e.Message
 }
 
-// ExitCode returns the appropriate exit code for this error
+// ExitCode returns the process exit code for this error. internal maps to 70;
+// every other (operational) code maps to 1. The usage/parse code 80 is never
+// returned here — render() assigns it for Kong parse failures.
 func (e *CLIError) ExitCode() int {
-	switch e.Code {
-	case "AUTH_FAILED", "AUTH_EXPIRED", "AUTH_MISSING", "VALIDATION_ERROR", "NOT_FOUND":
-		return ExitUserError
-	case "API_ERROR", "RATE_LIMITED":
-		return ExitAPIError
-	case "INTERNAL_ERROR":
+	if e.Code == CodeInternal {
 		return ExitInternal
-	default:
-		return ExitUserError
 	}
+	return ExitUserError
 }
 
-// JSON returns the error as JSON bytes
+// JSON returns the error wrapped as {"error": ...} JSON bytes.
 func (e *CLIError) JSON() ([]byte, error) {
 	wrapper := map[string]any{"error": e}
 	return json.MarshalIndent(wrapper, "", "  ")
 }
 
-// WithDetail adds a detail to the error
+// WithDetail adds a key/value to the error's details map.
 func (e *CLIError) WithDetail(key string, value any) *CLIError {
 	if e.Details == nil {
 		e.Details = make(map[string]any)
@@ -53,23 +76,31 @@ func (e *CLIError) WithDetail(key string, value any) *CLIError {
 	return e
 }
 
-// WithHint adds a hint to the error details
+// WithHint sets the top-level hint field (an actionable next step).
 func (e *CLIError) WithHint(hint string) *CLIError {
-	return e.WithDetail("hint", hint)
+	e.Hint = hint
+	return e
 }
 
-// Common error constructors
+// WithRetryable marks whether the identical call may later succeed.
+func (e *CLIError) WithRetryable(retryable bool) *CLIError {
+	e.Retryable = retryable
+	return e
+}
+
+// Common error constructors. Signatures are stable so call sites need no churn
+// when the underlying code vocabulary evolves.
 
 func NewAuthError(message string) *CLIError {
 	return &CLIError{
-		Code:    "AUTH_FAILED",
+		Code:    CodeUnauthenticated,
 		Message: message,
 	}
 }
 
 func NewAuthExpiredError() *CLIError {
 	err := &CLIError{
-		Code:    "AUTH_EXPIRED",
+		Code:    CodeUnauthenticated,
 		Message: "Authentication expired and refresh failed",
 	}
 	return err.WithHint("Run 'sol auth:login' to re-authenticate")
@@ -77,48 +108,95 @@ func NewAuthExpiredError() *CLIError {
 
 func NewAuthMissingError() *CLIError {
 	err := &CLIError{
-		Code:    "AUTH_MISSING",
+		Code:    CodeUnauthenticated,
 		Message: "Not authenticated",
 	}
 	return err.WithHint("Run 'sol auth:login' to authenticate")
 }
 
+// NewAPIError maps an HTTP status to the closest domain code. 401 is
+// unauthenticated, 403 permission_denied, 404 not_found, 5xx api_unavailable
+// (retryable); anything else is treated as an invalid request.
 func NewAPIError(message string, statusCode int) *CLIError {
-	return &CLIError{
-		Code:    "API_ERROR",
+	err := &CLIError{
 		Message: message,
 		Details: map[string]any{"status_code": statusCode},
 	}
+	switch {
+	case statusCode == 401:
+		err.Code = CodeUnauthenticated
+	case statusCode == 403:
+		err.Code = CodePermissionDenied
+	case statusCode == 404:
+		err.Code = CodeNotFound
+	case statusCode >= 500:
+		err.Code = CodeAPIUnavailable
+		err.Retryable = true
+	default:
+		err.Code = CodeInvalidArgument
+	}
+	return err
 }
 
 func NewNotFoundError(resource, id string) *CLIError {
 	return &CLIError{
-		Code:    "NOT_FOUND",
+		Code:    CodeNotFound,
 		Message: fmt.Sprintf("%s not found: %s", resource, id),
 	}
 }
 
 func NewValidationError(message string) *CLIError {
 	return &CLIError{
-		Code:    "VALIDATION_ERROR",
+		Code:    CodeInvalidArgument,
 		Message: message,
 	}
 }
 
+// NewNoProjectError reports that no project could be resolved from flag or
+// environment. Operational (exit 1) — the caller can recover by supplying one.
+func NewNoProjectError() *CLIError {
+	err := &CLIError{
+		Code:    CodeNoProjectSpecified,
+		Message: "no project specified",
+	}
+	return err.WithHint("Use --project or run from within a project directory")
+}
+
+// NewNoEnvironmentError reports that no environment could be resolved.
+// Operational (exit 1) — the caller can recover by supplying one.
+func NewNoEnvironmentError() *CLIError {
+	err := &CLIError{
+		Code:    CodeNoEnvironmentSpecified,
+		Message: "no environment specified",
+	}
+	return err.WithHint("Provide an environment ID or use --environment flag")
+}
+
 func NewRateLimitError(retryAfter int) *CLIError {
+	err := &CLIError{
+		Code:      CodeAPIUnavailable,
+		Message:   "API rate limit exceeded",
+		Retryable: true,
+		Details:   map[string]any{"retry_after": retryAfter},
+	}
+	return err.WithHint(fmt.Sprintf("Wait %d seconds or reduce request frequency", retryAfter))
+}
+
+// NewOperationFailedError reports that a remote operation reached a non-success
+// terminal state (failed, cancelled, or timed out while polling). Operational
+// (exit 1), not an internal bug: the API answered correctly; the work itself
+// did not succeed. Callers set Retryable via WithRetryable — a timeout may
+// succeed on a later poll, but a failed or cancelled activity will not.
+func NewOperationFailedError(message string) *CLIError {
 	return &CLIError{
-		Code:    "RATE_LIMITED",
-		Message: "API rate limit exceeded",
-		Details: map[string]any{
-			"retry_after": retryAfter,
-			"hint":        fmt.Sprintf("Wait %d seconds or reduce request frequency", retryAfter),
-		},
+		Code:    CodeOperationFailed,
+		Message: message,
 	}
 }
 
 func NewInternalError(message string) *CLIError {
 	err := &CLIError{
-		Code:    "INTERNAL_ERROR",
+		Code:    CodeInternal,
 		Message: message,
 	}
 	return err.WithHint("This is a bug. Please report it.")

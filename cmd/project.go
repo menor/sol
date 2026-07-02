@@ -47,8 +47,7 @@ func (c *ProjectInfoCmd) Run(ctx *Context) error {
 	if projectID == "" {
 		projectID = ctx.ProjectID()
 		if projectID == "" {
-			return errors.NewValidationError("no project specified").
-				WithHint("Provide a project ID or use --project flag")
+			return errors.NewNoProjectError()
 		}
 	}
 

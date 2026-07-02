@@ -14,8 +14,7 @@ type VariableListCmd struct {
 func (c *VariableListCmd) Run(ctx *Context) error {
 	projectID := ctx.ProjectID()
 	if projectID == "" {
-		return errors.NewValidationError("no project specified").
-			WithHint("Use --project or run from within a project directory")
+		return errors.NewNoProjectError()
 	}
 
 	client, err := ctx.APIClient()
@@ -37,7 +36,7 @@ func (c *VariableListCmd) Run(ctx *Context) error {
 	if level == "environment" {
 		envID := ctx.EnvironmentID()
 		if envID == "" {
-			return errors.NewValidationError("no environment specified for environment-level variables").
+			return errors.NewNoEnvironmentError().
 				WithHint("Use --environment or --level=project for project variables")
 		}
 		variables, err = client.ListEnvironmentVariables(ctx, projectID, envID)
@@ -62,8 +61,7 @@ type VariableGetCmd struct {
 func (c *VariableGetCmd) Run(ctx *Context) error {
 	projectID := ctx.ProjectID()
 	if projectID == "" {
-		return errors.NewValidationError("no project specified").
-			WithHint("Use --project or run from within a project directory")
+		return errors.NewNoProjectError()
 	}
 
 	client, err := ctx.APIClient()
@@ -84,7 +82,7 @@ func (c *VariableGetCmd) Run(ctx *Context) error {
 	if level == "environment" {
 		envID := ctx.EnvironmentID()
 		if envID == "" {
-			return errors.NewValidationError("no environment specified for environment-level variable").
+			return errors.NewNoEnvironmentError().
 				WithHint("Use --environment or --level=project for project variables")
 		}
 		variable, err = client.GetEnvironmentVariable(ctx, projectID, envID, c.Name)
@@ -113,8 +111,7 @@ type VariableSetCmd struct {
 func (c *VariableSetCmd) Run(ctx *Context) error {
 	projectID := ctx.ProjectID()
 	if projectID == "" {
-		return errors.NewValidationError("no project specified").
-			WithHint("Use --project or run from within a project directory")
+		return errors.NewNoProjectError()
 	}
 
 	client, err := ctx.APIClient()
@@ -143,7 +140,7 @@ func (c *VariableSetCmd) Run(ctx *Context) error {
 	if level == "environment" {
 		envID := ctx.EnvironmentID()
 		if envID == "" {
-			return errors.NewValidationError("no environment specified for environment-level variable").
+			return errors.NewNoEnvironmentError().
 				WithHint("Use --environment or --level=project for project variables")
 		}
 		variable, err = client.SetEnvironmentVariable(ctx, projectID, envID, input)
@@ -168,8 +165,7 @@ type VariableDeleteCmd struct {
 func (c *VariableDeleteCmd) Run(ctx *Context) error {
 	projectID := ctx.ProjectID()
 	if projectID == "" {
-		return errors.NewValidationError("no project specified").
-			WithHint("Use --project or run from within a project directory")
+		return errors.NewNoProjectError()
 	}
 
 	client, err := ctx.APIClient()
@@ -189,7 +185,7 @@ func (c *VariableDeleteCmd) Run(ctx *Context) error {
 	if level == "environment" {
 		envID := ctx.EnvironmentID()
 		if envID == "" {
-			return errors.NewValidationError("no environment specified for environment-level variable").
+			return errors.NewNoEnvironmentError().
 				WithHint("Use --environment or --level=project for project variables")
 		}
 		err = client.DeleteEnvironmentVariable(ctx, projectID, envID, c.Name)

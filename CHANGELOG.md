@@ -8,7 +8,13 @@
 - **Exit codes.** The `0/1/2/3` scheme is replaced by `0` success, `1` operational error, `70` internal error, `80` usage/parse error. The retry signal moved from exit codes to the `retryable` field in the error envelope.
 - **TOON field names.** TOON output now follows the same `json` struct-tag names as JSON output (`id`, `title`, `created_at` instead of `ID`, `Title`, `CreatedAt`), with empty optional fields omitted. TOON field order is alphabetical. Callers parsing the old Go-style field names must update.
 
+### Added
+
+- `--schema` output now advertises the error contract: an `errors` block describing the envelope fields and the closed code set, on every command.
+
 ### Fixed
+
+- `--schema` output's `exit_codes` documented the removed `0/1/2/3` scheme; it now reflects `0/1/70/80`.
 
 - `-o json` / `-o toon` are now honored on error, not just success.
 - TOON output no longer silently falls back to JSON for structs containing nil timestamp fields.

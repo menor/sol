@@ -1,5 +1,11 @@
 package cmd
 
+import (
+	"strconv"
+
+	"github.com/menor/sol/internal/errors"
+)
+
 // CommandSchema describes a command's interface for machine consumption.
 type CommandSchema struct {
 	Command     string            `json:"command"`
@@ -10,6 +16,15 @@ type CommandSchema struct {
 	Output      *OutputSchema     `json:"output,omitempty"`
 	Examples    []string          `json:"examples,omitempty"`
 	ExitCodes   map[string]string `json:"exit_codes"`
+	Errors      *ErrorSchema      `json:"errors,omitempty"`
+}
+
+// ErrorSchema describes the error contract shared by every command, so agents
+// can discover failure handling the same way they discover flags.
+type ErrorSchema struct {
+	Description string            `json:"description"`
+	Envelope    map[string]string `json:"envelope"`
+	Codes       map[string]string `json:"codes"`
 }
 
 // FlagSchema describes a command flag.
@@ -46,12 +61,37 @@ type PropertySchema struct {
 // globalFlags lists flags available on all commands.
 var globalFlags = []string{"output", "project", "environment", "quiet", "no-cache", "debug", "schema"}
 
-// defaultExitCodes are used by all commands.
+// defaultExitCodes are used by all commands. Keys are built from the
+// internal/errors constants so the schema cannot drift from the real scheme.
 var defaultExitCodes = map[string]string{
-	"0": "Success",
-	"1": "User error (bad input, auth failed)",
-	"2": "API error (server error, network issue)",
-	"3": "Internal error (bug in CLI)",
+	strconv.Itoa(errors.ExitSuccess):   "Success",
+	strconv.Itoa(errors.ExitUserError): "Operational error (recoverable; read code and hint from the error envelope)",
+	strconv.Itoa(errors.ExitInternal):  "Internal error (bug in Sol; do not retry blindly)",
+	strconv.Itoa(errors.ExitUsage):     "Usage/parse error (fix the invocation)",
+}
+
+// defaultErrorSchema advertises the error contract. One shared value: every
+// command fails through the same render path with the same envelope.
+var defaultErrorSchema = &ErrorSchema{
+	Description: "On failure the error envelope renders in the active output format (-o) on stdout as {\"error\": {...}}; stderr carries only logs. Branch on code, never on message text.",
+	Envelope: map[string]string{
+		"code":      "Stable snake_case identifier from the closed set in codes",
+		"message":   "Human-readable description",
+		"hint":      "Actionable next step; omitted when there is none",
+		"retryable": "true if the identical call may later succeed",
+		"details":   "Extra context (e.g. status_code); omitted when empty",
+	},
+	Codes: map[string]string{
+		errors.CodeUnauthenticated:        "Not authenticated, or authentication expired",
+		errors.CodeNoProjectSpecified:     "No project resolved from flag or environment",
+		errors.CodeNoEnvironmentSpecified: "No environment resolved from flag or environment",
+		errors.CodeNotFound:               "Resource does not exist",
+		errors.CodeInvalidArgument:        "Invalid input value or malformed invocation",
+		errors.CodePermissionDenied:       "Authenticated but not allowed",
+		errors.CodeAPIUnavailable:         "Upsun API unreachable, 5xx, or rate-limited (retryable)",
+		errors.CodeOperationFailed:        "Remote operation failed, was cancelled, or timed out (timeout is retryable)",
+		errors.CodeInternal:               "Bug in Sol itself",
+	},
 }
 
 // commandSchemas holds schema definitions for each command.
@@ -998,6 +1038,9 @@ func GetCommandSchema(command string) *CommandSchema {
 	if !ok {
 		return nil
 	}
+	// The error contract is identical for every command, so it is attached
+	// here instead of being repeated in each commandSchemas entry.
+	schema.Errors = defaultErrorSchema
 	return &schema
 }
 

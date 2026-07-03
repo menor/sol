@@ -24,6 +24,49 @@ func TestGetCommandSchema_Exists(t *testing.T) {
 	}
 }
 
+// The schema must advertise the real exit-code scheme (0/1/70/80) and the
+// error envelope contract on every command.
+func TestGetCommandSchema_AdvertisesErrorContract(t *testing.T) {
+	schema := GetCommandSchema("project:list")
+	if schema == nil {
+		t.Fatal("expected schema for project:list, got nil")
+	}
+
+	for _, code := range []string{"0", "1", "70", "80"} {
+		if _, ok := schema.ExitCodes[code]; !ok {
+			t.Errorf("exit_codes missing %q", code)
+		}
+	}
+	for _, code := range []string{"2", "3"} {
+		if _, ok := schema.ExitCodes[code]; ok {
+			t.Errorf("exit_codes still advertises removed code %q", code)
+		}
+	}
+
+	if schema.Errors == nil {
+		t.Fatal("schema missing errors block")
+	}
+	for _, field := range []string{"code", "message", "hint", "retryable", "details"} {
+		if _, ok := schema.Errors.Envelope[field]; !ok {
+			t.Errorf("errors.envelope missing field %q", field)
+		}
+	}
+	// The advertised codes must be exactly the closed set from internal/errors.
+	wantCodes := []string{
+		"unauthenticated", "no_project_specified", "no_environment_specified",
+		"not_found", "invalid_argument", "permission_denied",
+		"api_unavailable", "operation_failed", "internal",
+	}
+	if len(schema.Errors.Codes) != len(wantCodes) {
+		t.Errorf("errors.codes has %d entries, want %d", len(schema.Errors.Codes), len(wantCodes))
+	}
+	for _, code := range wantCodes {
+		if _, ok := schema.Errors.Codes[code]; !ok {
+			t.Errorf("errors.codes missing %q", code)
+		}
+	}
+}
+
 func TestGetCommandSchema_NotExists(t *testing.T) {
 	schema := GetCommandSchema("nonexistent:command")
 	if schema != nil {

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestJSONFormatterWrite(t *testing.T) {
@@ -140,13 +141,13 @@ func TestTOONFormatterWriteArray(t *testing.T) {
 
 	output := buf.String()
 	// TOON arrays use format: [count]{fields}:
-	// Example: [2]{ID,Name,Region}:
+	// Example: [2]{id,name,region}:
 	if !strings.Contains(output, "[2]") {
 		t.Errorf("TOON output should contain array count [2], got: %s", output)
 	}
-	// Should contain field schema
-	if !strings.Contains(output, "ID") || !strings.Contains(output, "Name") || !strings.Contains(output, "Region") {
-		t.Errorf("TOON output should contain field names, got: %s", output)
+	// Field names come from json tags, same contract as -o json
+	if !strings.Contains(output, "id") || !strings.Contains(output, "name") || !strings.Contains(output, "region") {
+		t.Errorf("TOON output should contain json-tag field names, got: %s", output)
 	}
 	// Should contain all values
 	if !strings.Contains(output, "abc123") || !strings.Contains(output, "def456") {
@@ -155,6 +156,60 @@ func TestTOONFormatterWriteArray(t *testing.T) {
 	// Should NOT contain JSON syntax
 	if strings.Contains(output, `"id"`) || strings.Contains(output, `"name"`) {
 		t.Errorf("TOON output should not contain JSON quoted keys, got: %s", output)
+	}
+}
+
+// TOON field names must follow the json tags, not the Go field names, so both
+// output formats expose one contract.
+func TestTOONFormatterUsesJSONTags(t *testing.T) {
+	var buf bytes.Buffer
+	f := NewTOONFormatter(&buf)
+
+	type Env struct {
+		MachineName string `json:"machine_name"`
+		Hidden      string `json:"-"`
+		Optional    string `json:"optional,omitempty"`
+	}
+	if err := f.Write(Env{MachineName: "staging", Hidden: "secret"}); err != nil {
+		t.Fatalf("Write() error = %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "machine_name: staging") {
+		t.Errorf("TOON should use json tag names, got: %s", output)
+	}
+	if strings.Contains(output, "MachineName") {
+		t.Errorf("TOON should not use Go field names, got: %s", output)
+	}
+	if strings.Contains(output, "secret") {
+		t.Errorf("TOON should respect json:\"-\", got: %s", output)
+	}
+	if strings.Contains(output, "optional") {
+		t.Errorf("TOON should respect omitempty, got: %s", output)
+	}
+}
+
+// Nil pointer fields (e.g. *time.Time) panic inside toon.Marshal when passed
+// directly; the JSON round-trip must neutralize them, keeping real TOON output
+// instead of the old silent fallback to JSON.
+func TestTOONFormatterHandlesNilPointers(t *testing.T) {
+	var buf bytes.Buffer
+	f := NewTOONFormatter(&buf)
+
+	type Activity struct {
+		ID        string     `json:"id"`
+		StartedAt *time.Time `json:"started_at,omitempty"`
+	}
+	if err := f.Write([]Activity{{ID: "act1"}, {ID: "act2"}}); err != nil {
+		t.Fatalf("Write() error = %v", err)
+	}
+
+	output := buf.String()
+	if strings.HasPrefix(output, "[{") {
+		t.Errorf("output fell back to JSON instead of TOON: %s", output)
+	}
+	if !strings.Contains(output, "act1") || !strings.Contains(output, "act2") {
+		t.Errorf("TOON output missing values, got: %s", output)
 	}
 }
 

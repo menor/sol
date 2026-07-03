@@ -86,8 +86,21 @@ func NewTOONFormatter(w io.Writer) *TOONFormatter {
 }
 
 func (f *TOONFormatter) Write(v any) error {
-	// toon-go panics on nil pointer types, so we need to recover
-	data, err := f.marshalWithRecover(v)
+	// toon-go reads `toon` struct tags, which sol's types don't carry.
+	// Round-trip through encoding/json so the json tags govern TOON field
+	// names and omitempty — one contract, two encodings. This also converts
+	// nil pointers (e.g. *time.Time) before toon-go sees them, which
+	// otherwise panic inside toon.Marshal.
+	jsonBytes, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	var generic any
+	if err := json.Unmarshal(jsonBytes, &generic); err != nil {
+		return err
+	}
+
+	data, err := f.marshalWithRecover(generic)
 	if err != nil {
 		// Fall back to compact JSON if TOON encoding fails
 		encoder := json.NewEncoder(f.writer)
@@ -104,8 +117,9 @@ func (f *TOONFormatter) Write(v any) error {
 	return err
 }
 
-// marshalWithRecover calls toon.Marshal with panic recovery.
-// toon-go panics on nil pointer types (e.g., *time.Time), so we catch and return an error.
+// marshalWithRecover calls toon.Marshal with panic recovery. The JSON
+// round-trip in Write removes the known panic triggers (nil pointer types),
+// but toon-go is pre-1.0 so keep the safety net.
 func (f *TOONFormatter) marshalWithRecover(v any) (data []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -129,14 +143,21 @@ func (f *TOONFormatter) WriteError(err error) error {
 	return writeErr
 }
 
-// New creates a formatter based on format string
+// New creates a formatter based on format string, writing to stdout.
 func New(format string) Formatter {
+	return NewWithWriter(format, os.Stdout)
+}
+
+// NewWithWriter creates a formatter based on format string, writing to w.
+// The error render path uses this to inject a writer (stdout in production,
+// a buffer in tests).
+func NewWithWriter(format string, w io.Writer) Formatter {
 	switch Format(format) {
 	case FormatTOON:
-		return NewTOONFormatter(os.Stdout)
+		return NewTOONFormatter(w)
 	case FormatText:
-		return NewTextFormatter(os.Stdout)
+		return NewTextFormatter(w)
 	default:
-		return NewJSONFormatter(os.Stdout, true)
+		return NewJSONFormatter(w, true)
 	}
 }

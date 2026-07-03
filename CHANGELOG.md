@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.0 - 2026-07-03
+
+### Fixed
+
+- **`UPSUN_TOKEN` now works with Console API tokens.** The token was sent verbatim as a `Bearer` header, so every request returned 401. Sol now exchanges it at `auth.upsun.com` (`grant_type=api_token`, matching the official CLI) and caches the short-lived access token in memory, re-exchanging 60 seconds before expiry. Create tokens in the Upsun Console under Profile → My Profile → API Tokens. This unblocks the CI/automation auth path.
+- A rejected API token reports `unauthenticated` (exit 1) with a recovery hint; auth-server failures during the exchange report `api_unavailable` with `retryable: true`. Neither falls through to `internal` (exit 70).
+
+### Changed
+
+- `auth:info` with `UPSUN_TOKEN` set now includes a hint that the token is exchanged automatically.
+- `VERSION` in the build is derived from `git describe` by default.
+
 ## v0.2.0 - 2026-07-03
 
 ### Breaking changes

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/menor/sol/internal/api"
+	"github.com/menor/sol/internal/auth"
 	"github.com/menor/sol/internal/errors"
 )
 
@@ -188,6 +189,19 @@ func TestHandleAPIError_Classification(t *testing.T) {
 		{
 			"network failure is retryable api_unavailable",
 			fmt.Errorf("execute request: %w", &url.Error{Op: "Get", URL: "https://api.upsun.com", Err: stderrors.New("dial tcp: no route to host")}),
+			errors.CodeAPIUnavailable, true,
+		},
+		{
+			// The exchange runs inside RoundTrip, so http.Client wraps its
+			// failure in *url.Error; the sentinel must still win over the
+			// url.Error branch.
+			"rejected API token is unauthenticated, not retryable",
+			fmt.Errorf("list projects: %w", &url.Error{Op: "Get", URL: "https://api.upsun.com", Err: fmt.Errorf("get access token: exchange UPSUN_TOKEN: %w", auth.ErrInvalidAPIToken)}),
+			errors.CodeUnauthenticated, false,
+		},
+		{
+			"exchange server failure is retryable api_unavailable",
+			fmt.Errorf("list projects: %w", &url.Error{Op: "Get", URL: "https://api.upsun.com", Err: fmt.Errorf("get access token: exchange UPSUN_TOKEN: %w", auth.ErrExchangeUnavailable)}),
 			errors.CodeAPIUnavailable, true,
 		},
 		{

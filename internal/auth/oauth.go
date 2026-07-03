@@ -5,10 +5,15 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"html"
+	"io"
 	"net"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -34,7 +39,7 @@ const (
 // The redirect URL includes the dynamically assigned port.
 func OAuthConfig(redirectURL string) *oauth2.Config {
 	return &oauth2.Config{
-		ClientID:    ClientID,
+		ClientID: ClientID,
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  AuthURL,
 			TokenURL: TokenURL,
@@ -167,6 +172,108 @@ func StartCallbackServer(ctx context.Context) (*http.Server, string, <-chan Call
 	return server, redirectURL, resultChan, nil
 }
 
+// Sentinel errors for API token exchange. ExchangeAPIToken wraps them with %w
+// so the error-classification boundary can branch with errors.Is.
+var (
+	// ErrInvalidAPIToken means the auth server definitively rejected the API
+	// token (4xx). Retrying the identical exchange will not succeed.
+	ErrInvalidAPIToken = errors.New("invalid API token")
+
+	// ErrExchangeUnavailable means the auth server failed (5xx) or returned a
+	// response we couldn't parse. The identical exchange may later succeed.
+	ErrExchangeUnavailable = errors.New("token exchange unavailable")
+)
+
+// defaultExchangeExpiry is assumed when the token response omits expires_in
+// (optional per RFC 6749). A zero Expiry means "never expires" to
+// oauth2.Token.Valid(), which would pin a dead token in the cache forever;
+// a too-eager re-exchange is cheap.
+const defaultExchangeExpiry = 5 * time.Minute
+
+// ExchangeAPIToken exchanges a Console API token for a short-lived access
+// token using the api_token grant. Access tokens come without a refresh
+// token — re-exchange is the refresh.
+//
+// This is a manual HTTP call because oauth2.Config.Exchange hardcodes
+// grant_type=authorization_code.
+func ExchangeAPIToken(ctx context.Context, tokenURL, clientID, apiToken string) (*oauth2.Token, error) {
+	form := url.Values{
+		"grant_type": {"api_token"},
+		"api_token":  {apiToken},
+		"client_id":  {clientID},
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("build token exchange request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	// Network-level failures keep their *url.Error so the boundary
+	// classifies them api_unavailable + retryable.
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("token exchange: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil, fmt.Errorf("token exchange: read response (%v): %w", err, ErrExchangeUnavailable)
+	}
+
+	switch {
+	case resp.StatusCode == http.StatusOK:
+		// Fall through to parse.
+	case resp.StatusCode >= 400 && resp.StatusCode < 500:
+		return nil, fmt.Errorf("token exchange rejected (status %d)%s: %w",
+			resp.StatusCode, oauthErrorDetail(body), ErrInvalidAPIToken)
+	default:
+		return nil, fmt.Errorf("token exchange failed (status %d)%s: %w",
+			resp.StatusCode, oauthErrorDetail(body), ErrExchangeUnavailable)
+	}
+
+	var tokenResp struct {
+		AccessToken string `json:"access_token"`
+		TokenType   string `json:"token_type"`
+		ExpiresIn   int64  `json:"expires_in"`
+	}
+	if err := json.Unmarshal(body, &tokenResp); err != nil {
+		return nil, fmt.Errorf("token exchange: parse response: %w", ErrExchangeUnavailable)
+	}
+	if tokenResp.AccessToken == "" {
+		return nil, fmt.Errorf("token exchange: response missing access_token: %w", ErrExchangeUnavailable)
+	}
+
+	lifetime := time.Duration(tokenResp.ExpiresIn) * time.Second
+	if lifetime <= 0 {
+		lifetime = defaultExchangeExpiry
+	}
+
+	return &oauth2.Token{
+		AccessToken: tokenResp.AccessToken,
+		TokenType:   tokenResp.TokenType,
+		Expiry:      time.Now().Add(lifetime),
+	}, nil
+}
+
+// oauthErrorDetail extracts the OAuth error/error_description fields from an
+// error response body, formatted for appending to an error message. Returns
+// "" when the body isn't a recognizable OAuth error.
+func oauthErrorDetail(body []byte) string {
+	var oauthErr struct {
+		Error       string `json:"error"`
+		Description string `json:"error_description"`
+	}
+	if err := json.Unmarshal(body, &oauthErr); err != nil || oauthErr.Error == "" {
+		return ""
+	}
+	if oauthErr.Description != "" {
+		return fmt.Sprintf(": %s: %s", oauthErr.Error, oauthErr.Description)
+	}
+	return ": " + oauthErr.Error
+}
+
 // ExchangeCode exchanges an authorization code for tokens.
 // The PKCE verifier must match the challenge sent during authorization.
 func ExchangeCode(ctx context.Context, cfg *oauth2.Config, code string, pkce *PKCEParams) (*oauth2.Token, error) {
@@ -226,4 +333,3 @@ func RefreshToken(ctx context.Context, cfg *oauth2.Config, refreshToken string) 
 	ts := cfg.TokenSource(ctx, token)
 	return ts.Token()
 }
-

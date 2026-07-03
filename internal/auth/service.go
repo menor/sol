@@ -150,10 +150,12 @@ func (s *Service) Logout(ctx context.Context) error {
 func (s *Service) Status(ctx context.Context) (*AuthStatus, error) {
 	status := &AuthStatus{}
 
-	// Check for env var first (CI path)
+	// Check for env var first (CI path). No live exchange here — auth:info
+	// stays offline and fast.
 	if envToken := getEnv(EnvTokenVar); envToken != "" {
 		status.Authenticated = true
 		status.Method = "environment_variable"
+		status.Hint = EnvTokenVar + " holds an API token; it is exchanged for an access token automatically"
 		return status, nil
 	}
 

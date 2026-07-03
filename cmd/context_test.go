@@ -2,10 +2,12 @@ package cmd
 
 import (
 	"context"
+	stderrors "errors"
 	"testing"
 	"time"
 
 	"github.com/menor/sol/internal/api"
+	"github.com/menor/sol/internal/errors"
 )
 
 func TestWaitForActivity_Success(t *testing.T) {
@@ -146,8 +148,14 @@ func TestWaitForActivity_ContextCancellation(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when context is cancelled")
 	}
-	if err != context.Canceled {
-		t.Errorf("expected context.Canceled error, got: %v", err)
+	// Cancellation must reach render() classified, not as a raw context
+	// error (which would report as internal, exit 70).
+	var cliErr *errors.CLIError
+	if !stderrors.As(err, &cliErr) {
+		t.Fatalf("expected *errors.CLIError, got %T: %v", err, err)
+	}
+	if cliErr.Code != errors.CodeOperationFailed {
+		t.Errorf("Code = %q, want %q", cliErr.Code, errors.CodeOperationFailed)
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/alecthomas/kong"
+	"github.com/menor/sol/internal/errors"
 	"github.com/menor/sol/internal/output"
 )
 
@@ -69,30 +70,41 @@ type CLI struct {
 	SSHKeyList               SSHKeyListCmd               `cmd:"" name:"ssh-key:list" aliases:"ssh-keys" help:"List SSH keys for the current user"`
 }
 
-// Execute parses command-line arguments and runs the appropriate command.
-// This is the main entry point for the CLI.
-func Execute() error {
-	// Handle --schema flag early, before Kong validates arguments
+// Execute parses command-line arguments and runs the appropriate command,
+// returning the process exit code. Every error path funnels through render(),
+// so main is reduced to os.Exit(cmd.Execute()).
+func Execute() (exitCode int) {
+	// An unexpected panic is an internal error (exit 70), not a crash with a
+	// Go stack trace on stdout.
+	defer func() {
+		if r := recover(); r != nil {
+			exitCode = render(nil, errors.NewInternalError(fmt.Sprintf("panic: %v", r)))
+		}
+	}()
+
+	// Handle --schema flag early, before Kong validates arguments.
 	if hasSchemaFlag(os.Args) {
-		return handleSchemaRequest(os.Args)
+		if err := handleSchemaRequest(os.Args); err != nil {
+			return render(nil, err)
+		}
+		return errors.ExitSuccess
 	}
 
 	var cli CLI
 	parser, err := kong.New(&cli,
 		kong.Name("sol"),
 		kong.Description("Agent-optimized CLI for Upsun"),
-		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{
 			Compact: true,
 		}),
 	)
 	if err != nil {
-		return err
+		return render(nil, err)
 	}
 
 	kongCtx, err := parser.Parse(os.Args[1:])
 	if err != nil {
-		parser.FatalIfErrorf(err)
+		return renderParseError(err)
 	}
 
 	// Create execution context
@@ -101,7 +113,7 @@ func Execute() error {
 		CLI:     &cli,
 	}
 
-	return kongCtx.Run(ctx)
+	return render(&cli, kongCtx.Run(ctx))
 }
 
 // hasSchemaFlag checks if --schema is present in args.

@@ -1,7 +1,6 @@
 package errors
 
 import (
-	"encoding/json"
 	"fmt"
 )
 
@@ -61,12 +60,6 @@ func (e *CLIError) ExitCode() int {
 	return ExitUserError
 }
 
-// JSON returns the error wrapped as {"error": ...} JSON bytes.
-func (e *CLIError) JSON() ([]byte, error) {
-	wrapper := map[string]any{"error": e}
-	return json.MarshalIndent(wrapper, "", "  ")
-}
-
 // WithDetail adds a key/value to the error's details map.
 func (e *CLIError) WithDetail(key string, value any) *CLIError {
 	if e.Details == nil {
@@ -92,10 +85,11 @@ func (e *CLIError) WithRetryable(retryable bool) *CLIError {
 // when the underlying code vocabulary evolves.
 
 func NewAuthError(message string) *CLIError {
-	return &CLIError{
+	err := &CLIError{
 		Code:    CodeUnauthenticated,
 		Message: message,
 	}
+	return err.WithHint("Run 'sol auth:login' to authenticate")
 }
 
 func NewAuthExpiredError() *CLIError {

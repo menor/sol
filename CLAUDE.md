@@ -109,12 +109,15 @@ Design principle: Each command does one thing. Agents compose multiple commands 
 
 ### Error Handling
 All errors should use `internal/errors.CLIError` with:
-- A code (e.g., `AUTH_FAILED`, `API_ERROR`)
+- A code from the closed snake_case set (e.g., `unauthenticated`, `no_project_specified`, `not_found`, `operation_failed`) — see the `Code*` constants in `internal/errors`
 - A human-readable message
-- Optional details map
-- Optional hint for recovery
+- Optional top-level hint for recovery (`WithHint`)
+- `retryable` flag when the identical call may later succeed (`WithRetryable`)
+- Optional details map (`WithDetail`)
 
-Exit codes are mapped from error codes via `CLIError.ExitCode()`.
+Exit codes: 0 success, 1 operational, 70 internal, 80 usage/parse. `CLIError.ExitCode()` maps `internal` → 70 and everything else → 1; exit 80 is assigned only by the Kong parse-error path in `cmd/render.go`, never derived from a code.
+
+Every error path funnels through `render()` in `cmd/render.go`: structured mode (json/toon) writes the `{"error": {...}}` envelope to stdout with nothing on stderr; the exit code comes from the returned error. Command handlers just `return` a `*CLIError`.
 
 ### Output
 Default output is TOON. The `--output` flag supports:

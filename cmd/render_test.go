@@ -182,8 +182,13 @@ func TestFormatFromArgs(t *testing.T) {
 		{"separate --output", []string{"sol", "--output", "json", "project:info"}, "json"},
 		{"equals --output", []string{"sol", "project:info", "--output=json"}, "json"},
 		{"equals -o", []string{"sol", "project:info", "-o=toon"}, "toon"},
+		{"attached -ojson", []string{"sol", "project:info", "-ojson"}, "json"},
+		{"attached -otoon", []string{"sol", "project:info", "-otoon"}, "toon"},
 		{"absent defaults to toon", []string{"sol", "project:info"}, "toon"},
 		{"dangling -o defaults to toon", []string{"sol", "-o"}, "toon"},
+		{"invalid value defaults to toon", []string{"sol", "-o", "yaml"}, "toon"},
+		{"invalid equals value defaults to toon", []string{"sol", "--output=yaml"}, "toon"},
+		{"invalid then valid picks valid", []string{"sol", "-o", "yaml", "-o", "json"}, "json"},
 	}
 
 	for _, tt := range tests {
@@ -192,5 +197,16 @@ func TestFormatFromArgs(t *testing.T) {
 				t.Errorf("formatFromArgs(%v) = %q, want %q", tt.args, got, tt.want)
 			}
 		})
+	}
+}
+
+// The schema path keeps its historical json default; the same scanner must
+// honor a caller-supplied default.
+func TestFormatFromArgsOrDefault(t *testing.T) {
+	if got := formatFromArgsOrDefault([]string{"--schema"}, "json"); got != "json" {
+		t.Errorf("absent format = %q, want json default", got)
+	}
+	if got := formatFromArgsOrDefault([]string{"--schema", "-o", "toon"}, "json"); got != "toon" {
+		t.Errorf("explicit toon = %q, want toon", got)
 	}
 }

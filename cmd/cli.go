@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"sort"
 
 	"github.com/alecthomas/kong"
@@ -75,16 +77,25 @@ type CLI struct {
 // so main is reduced to os.Exit(cmd.Execute()).
 func Execute() (exitCode int) {
 	// An unexpected panic is an internal error (exit 70), not a crash with a
-	// Go stack trace on stdout.
+	// Go stack trace on stdout. The stack survives in details — without it a
+	// "please report this" error is undiagnosable.
 	defer func() {
 		if r := recover(); r != nil {
-			exitCode = render(nil, errors.NewInternalError(fmt.Sprintf("panic: %v", r)))
+			exitCode = render(nil, errors.NewInternalError(fmt.Sprintf("panic: %v", r)).
+				WithDetail("stack", string(debug.Stack())))
 		}
 	}()
 
 	// Handle --schema flag early, before Kong validates arguments.
 	if hasSchemaFlag(os.Args) {
 		if err := handleSchemaRequest(os.Args); err != nil {
+			// A bad command name is a malformed invocation — same treatment
+			// as a Kong parse failure (exit 80). Anything else (e.g. a write
+			// failure) stays on the normal render path.
+			var cliErr *errors.CLIError
+			if stderrors.As(err, &cliErr) && cliErr.Code == errors.CodeInvalidArgument {
+				return renderParseErrorIn(formatFromArgsOrDefault(os.Args, "json"), cliErr)
+			}
 			return render(nil, err)
 		}
 		return errors.ExitSuccess
@@ -133,20 +144,22 @@ func handleSchemaRequest(args []string) error {
 		args = args[1:]
 	}
 
-	// Find the command name (first arg that doesn't start with -)
-	var command string
-	var outputFormat string = "json"
+	// The schema path historically defaults to json, not the global toon.
+	outputFormat := formatFromArgsOrDefault(args, "json")
 
-	for i, arg := range args {
+	// Find the command name: the first arg that is neither a flag nor the
+	// value of -o/--output.
+	var command string
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
 		if arg == "--output" || arg == "-o" {
-			if i+1 < len(args) {
-				outputFormat = args[i+1]
-			}
-		} else if len(arg) > 9 && arg[:9] == "--output=" {
-			outputFormat = arg[9:]
-		} else if len(arg) > 3 && arg[:3] == "-o=" {
-			outputFormat = arg[3:]
-		} else if !isFlag(arg) && command == "" {
+			i++ // skip the flag's value
+			continue
+		}
+		if isFlag(arg) {
+			continue
+		}
+		if command == "" {
 			command = arg
 		}
 	}
@@ -158,13 +171,8 @@ func handleSchemaRequest(args []string) error {
 
 	schema := GetCommandSchema(command)
 	if schema == nil {
-		// Unknown command - return error with available commands
-		var available []string
-		for name := range commandSchemas {
-			available = append(available, name)
-		}
-		sort.Strings(available)
-		return fmt.Errorf("unknown command %q. Available commands: %v", command, available)
+		return errors.NewValidationError(fmt.Sprintf("unknown command %q", command)).
+			WithHint("Run 'sol --schema' to list all commands")
 	}
 
 	formatter := output.New(outputFormat)

@@ -175,7 +175,6 @@ func TestErrorConstructors(t *testing.T) {
 		{"NewValidationError", NewValidationError("bad input"), CodeInvalidArgument},
 		{"NewNoProjectError", NewNoProjectError(), CodeNoProjectSpecified},
 		{"NewNoEnvironmentError", NewNoEnvironmentError(), CodeNoEnvironmentSpecified},
-		{"NewRateLimitError", NewRateLimitError(60), CodeAPIUnavailable},
 		{"NewOperationFailedError", NewOperationFailedError("deploy failed"), CodeOperationFailed},
 		{"NewInternalError", NewInternalError("bug"), CodeInternal},
 	}
@@ -199,6 +198,7 @@ func TestNewAPIErrorMapsStatusToCode(t *testing.T) {
 		{403, CodePermissionDenied, false},
 		{404, CodeNotFound, false},
 		{400, CodeInvalidArgument, false},
+		{429, CodeAPIUnavailable, true},
 		{500, CodeAPIUnavailable, true},
 		{503, CodeAPIUnavailable, true},
 	}
@@ -219,14 +219,11 @@ func TestNewAPIErrorMapsStatusToCode(t *testing.T) {
 	}
 }
 
-func TestNewRateLimitErrorIsRetryable(t *testing.T) {
-	err := NewRateLimitError(120)
+func TestNewAPIErrorRateLimitHasHint(t *testing.T) {
+	err := NewAPIError("too many requests", 429)
 
 	if !err.Retryable {
 		t.Error("rate limit error should be retryable")
-	}
-	if err.Details["retry_after"] != 120 {
-		t.Errorf("Details[retry_after] = %v, want 120", err.Details["retry_after"])
 	}
 	if err.Hint == "" {
 		t.Error("rate limit error should carry a hint")

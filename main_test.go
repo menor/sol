@@ -129,6 +129,32 @@ func TestBogusCommandExits80(t *testing.T) {
 	}
 }
 
+// A typo'd command with --schema is the same mistake as a typo'd command
+// without it: exit 80, invalid_argument. No -o flag: the error must follow
+// the schema path's json default, not the global toon default.
+func TestSchemaUnknownCommandExits80(t *testing.T) {
+	stdout, _, exitCode := runSol(t, "projct:list", "--schema")
+
+	if exitCode != 80 {
+		t.Errorf("exit = %d, want 80", exitCode)
+	}
+	envelope := decodeErrorEnvelope(t, stdout)
+	if envelope["code"] != "invalid_argument" {
+		t.Errorf("code = %v, want invalid_argument", envelope["code"])
+	}
+}
+
+// Kong accepts the attached short-flag form; the parse-error render path must
+// honor it too, not fall back to TOON.
+func TestBogusCommandAttachedFormatFlag(t *testing.T) {
+	stdout, _, exitCode := runSol(t, "bogus:command", "-ojson")
+
+	if exitCode != 80 {
+		t.Errorf("exit = %d, want 80", exitCode)
+	}
+	decodeErrorEnvelope(t, stdout) // fails the test if stdout is not JSON
+}
+
 func TestVersionUnchanged(t *testing.T) {
 	stdout, _, exitCode := runSol(t, "version")
 

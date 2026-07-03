@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	stderrors "errors"
 	"strings"
 	"testing"
+
+	"github.com/menor/sol/internal/errors"
 )
 
 func TestGetCommandSchema_Exists(t *testing.T) {
@@ -168,14 +171,34 @@ func TestIsFlag(t *testing.T) {
 }
 
 func TestHandleSchemaRequest_UnknownCommand(t *testing.T) {
-	// Test that unknown commands return an error
 	err := handleSchemaRequest([]string{"sol", "unknown:cmd", "--schema"})
 	if err == nil {
-		t.Error("expected error for unknown command")
+		t.Fatal("expected error for unknown command")
 	}
-	// Error should mention the unknown command
-	if err != nil && !strings.Contains(err.Error(), "unknown:cmd") {
-		t.Errorf("error should mention unknown command, got: %s", err.Error())
+	// A typo'd command is a malformed invocation: it must carry
+	// invalid_argument so Execute can route it to exit 80, and a hint that
+	// points at discovery instead of dumping every command into the message.
+	var cliErr *errors.CLIError
+	if !stderrors.As(err, &cliErr) {
+		t.Fatalf("expected *errors.CLIError, got %T", err)
+	}
+	if cliErr.Code != errors.CodeInvalidArgument {
+		t.Errorf("Code = %q, want %q", cliErr.Code, errors.CodeInvalidArgument)
+	}
+	if !strings.Contains(cliErr.Message, "unknown:cmd") {
+		t.Errorf("error should mention unknown command, got: %s", cliErr.Message)
+	}
+	if cliErr.Hint == "" {
+		t.Error("expected a discovery hint")
+	}
+}
+
+// The command name must be found even when it follows -o and its value
+// (regression: "json" in `sol --schema -o json project:list` was mistaken
+// for the command name).
+func TestHandleSchemaRequest_FormatValueNotMistakenForCommand(t *testing.T) {
+	if err := handleSchemaRequest([]string{"sol", "--schema", "-o", "json", "project:list"}); err != nil {
+		t.Errorf("unexpected error: %v", err)
 	}
 }
 

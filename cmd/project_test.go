@@ -2,10 +2,14 @@ package cmd
 
 import (
 	"context"
+	stderrors "errors"
+	"fmt"
+	"net/url"
 	"testing"
 	"time"
 
 	"github.com/menor/sol/internal/api"
+	"github.com/menor/sol/internal/errors"
 )
 
 func TestProjectListCmd_Success(t *testing.T) {
@@ -153,6 +157,65 @@ func TestProjectInfoCmd_NoProjectSpecified(t *testing.T) {
 	err := cmd.Run(ctx)
 	if err == nil {
 		t.Fatal("expected error when no project specified")
+	}
+}
+
+// handleAPIError must classify failures into operational codes; only errors
+// with no better home may become internal (exit 70). The api package wraps
+// errors with %w, so classification has to survive wrapping.
+func TestHandleAPIError_Classification(t *testing.T) {
+	tests := []struct {
+		name          string
+		err           error
+		wantCode      string
+		wantRetryable bool
+	}{
+		{
+			"bare 404 becomes not_found",
+			&api.APIError{StatusCode: 404, Message: "gone"},
+			errors.CodeNotFound, false,
+		},
+		{
+			"wrapped 401 stays unauthenticated",
+			fmt.Errorf("get current user: %w", &api.APIError{StatusCode: 401, Message: "no"}),
+			errors.CodeUnauthenticated, false,
+		},
+		{
+			"wrapped 429 is retryable api_unavailable",
+			fmt.Errorf("get project: %w", &api.APIError{StatusCode: 429, Message: "slow down"}),
+			errors.CodeAPIUnavailable, true,
+		},
+		{
+			"network failure is retryable api_unavailable",
+			fmt.Errorf("execute request: %w", &url.Error{Op: "Get", URL: "https://api.upsun.com", Err: stderrors.New("dial tcp: no route to host")}),
+			errors.CodeAPIUnavailable, true,
+		},
+		{
+			"context deadline is retryable api_unavailable",
+			fmt.Errorf("execute request: %w", context.DeadlineExceeded),
+			errors.CodeAPIUnavailable, true,
+		},
+		{
+			"unclassifiable error falls through to internal",
+			stderrors.New("something unexpected"),
+			errors.CodeInternal, false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := handleAPIError(tt.err, "project", "proj123")
+			var cliErr *errors.CLIError
+			if !stderrors.As(err, &cliErr) {
+				t.Fatalf("handleAPIError returned %T, want *errors.CLIError", err)
+			}
+			if cliErr.Code != tt.wantCode {
+				t.Errorf("Code = %q, want %q", cliErr.Code, tt.wantCode)
+			}
+			if cliErr.Retryable != tt.wantRetryable {
+				t.Errorf("Retryable = %v, want %v", cliErr.Retryable, tt.wantRetryable)
+			}
+		})
 	}
 }
 

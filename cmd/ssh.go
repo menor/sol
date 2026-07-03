@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -124,5 +125,27 @@ func execSSH(ctx context.Context, args []string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	return cmd.Run()
+	return classifySSHError(cmd.Run())
+}
+
+// classifySSHError maps the result of running ssh to a CLIError. A non-zero
+// exit is an operational failure, not a Sol bug. ssh reserves 255 for its own
+// (connection) errors; anything else is the remote command's status,
+// preserved in details.exit_code.
+func classifySSHError(err error) error {
+	if err == nil {
+		return nil
+	}
+	var exitErr *exec.ExitError
+	if stderrors.As(err, &exitErr) {
+		code := exitErr.ExitCode()
+		cliErr := errors.NewOperationFailedError(
+			fmt.Sprintf("ssh exited with status %d", code)).
+			WithDetail("exit_code", code)
+		if code == 255 {
+			return cliErr.WithHint("SSH connection failed; check the environment is active and your SSH access")
+		}
+		return cliErr
+	}
+	return errors.NewInternalError("ssh failed to run: " + err.Error())
 }

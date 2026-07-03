@@ -42,8 +42,12 @@ func renderTo(format string, err error, stdout, stderr io.Writer) int {
 	switch format {
 	case "json", "toon":
 		// Structured mode (ADR 0002): the envelope owns stdout, nothing on
-		// stderr. One stream, one format, fully parseable.
-		_ = output.NewWithWriter(format, stdout).Write(errorEnvelope{Error: cliErr})
+		// stderr. One stream, one format, fully parseable. If stdout is gone
+		// (e.g. a closed pipe), fall back to stderr rather than exiting with
+		// the envelope silently lost.
+		if werr := output.NewWithWriter(format, stdout).Write(errorEnvelope{Error: cliErr}); werr != nil {
+			fmt.Fprintf(stderr, "error: %s\n", cliErr.Message)
+		}
 	default:
 		// Human mode: message + optional hint on stderr, as before.
 		fmt.Fprintf(stderr, "error: %s\n", cliErr.Message)
@@ -61,9 +65,20 @@ func renderTo(format string, err error, stdout, stderr io.Writer) int {
 // code coming from a command handler still exits 1, because there it means a
 // bad value at runtime, not a malformed invocation.
 func renderParseError(err error) int {
-	cliErr := errors.NewValidationError(err.Error()).
-		WithHint("Run 'sol --help' to see available commands and flags")
-	renderTo(formatFromArgs(os.Args), cliErr, os.Stdout, os.Stderr)
+	return renderParseErrorIn(formatFromArgs(os.Args), err)
+}
+
+// renderParseErrorIn is renderParseError with an explicit format, for callers
+// whose path has a different default (--schema historically defaults to json).
+func renderParseErrorIn(format string, err error) int {
+	// An already-classified CLIError (e.g. from the --schema path) keeps its
+	// own message and hint; only bare Kong errors get the generic wrap.
+	var cliErr *errors.CLIError
+	if !stderrors.As(err, &cliErr) {
+		cliErr = errors.NewValidationError(err.Error()).
+			WithHint("Run 'sol --help' to see available commands and flags")
+	}
+	renderTo(format, cliErr, os.Stdout, os.Stderr)
 	return errors.ExitUsage
 }
 
@@ -81,17 +96,31 @@ func resolveFormat(cli *CLI) string {
 // formatFromArgs scans raw args for -o/--output, defaulting to the CLI's toon
 // default when absent. Used only when the parsed CLI is unreliable.
 func formatFromArgs(args []string) string {
+	return formatFromArgsOrDefault(args, "toon")
+}
+
+// formatFromArgsOrDefault scans raw args for every -o/--output spelling Kong
+// accepts (separate value, =value, and the attached short form -ojson). An
+// absent or invalid value yields def — this scan renders errors, so it must
+// never propagate a format the formatter doesn't support.
+func formatFromArgsOrDefault(args []string, def string) string {
 	for i, arg := range args {
+		var format string
 		switch {
 		case arg == "--output" || arg == "-o":
 			if i+1 < len(args) {
-				return args[i+1]
+				format = args[i+1]
 			}
 		case strings.HasPrefix(arg, "--output="):
-			return strings.TrimPrefix(arg, "--output=")
+			format = strings.TrimPrefix(arg, "--output=")
 		case strings.HasPrefix(arg, "-o="):
-			return strings.TrimPrefix(arg, "-o=")
+			format = strings.TrimPrefix(arg, "-o=")
+		case strings.HasPrefix(arg, "-o"):
+			format = strings.TrimPrefix(arg, "-o")
+		}
+		if format == "json" || format == "toon" {
+			return format
 		}
 	}
-	return "toon"
+	return def
 }

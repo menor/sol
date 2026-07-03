@@ -111,7 +111,9 @@ func (c *Context) WaitForActivity(client api.API, projectID, activityID string) 
 	for {
 		activity, err := client.GetActivity(c, projectID, activityID)
 		if err != nil {
-			return nil, err
+			// Classify the poll failure (api_unavailable, not_found, ...)
+			// instead of letting a raw error reach render() as internal.
+			return nil, handleAPIError(err, "activity", activityID)
 		}
 
 		// Check if activity is complete

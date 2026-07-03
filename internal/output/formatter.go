@@ -18,10 +18,11 @@ const (
 	FormatText Format = "text"
 )
 
-// Formatter handles output formatting
+// Formatter handles output formatting. Errors render through Write as an
+// envelope built in cmd.render — there is no separate error method, so the
+// envelope shape cannot fork between call sites.
 type Formatter interface {
 	Write(v any) error
-	WriteError(err error) error
 }
 
 // JSONFormatter outputs JSON
@@ -43,15 +44,6 @@ func (f *JSONFormatter) Write(v any) error {
 	return encoder.Encode(v)
 }
 
-func (f *JSONFormatter) WriteError(err error) error {
-	wrapper := map[string]any{
-		"error": map[string]any{
-			"message": err.Error(),
-		},
-	}
-	return f.Write(wrapper)
-}
-
 // TextFormatter outputs human-readable text
 type TextFormatter struct {
 	writer io.Writer
@@ -68,11 +60,6 @@ func (f *TextFormatter) Write(v any) error {
 	encoder := json.NewEncoder(f.writer)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(v)
-}
-
-func (f *TextFormatter) WriteError(err error) error {
-	_, writeErr := f.writer.Write([]byte("Error: " + err.Error() + "\n"))
-	return writeErr
 }
 
 // TOONFormatter outputs token-efficient format
@@ -136,11 +123,6 @@ type toonPanicError struct {
 
 func (e *toonPanicError) Error() string {
 	return fmt.Sprintf("toon encoding panic: %v", e.recovered)
-}
-
-func (f *TOONFormatter) WriteError(err error) error {
-	_, writeErr := f.writer.Write([]byte("error: " + err.Error() + "\n"))
-	return writeErr
 }
 
 // New creates a formatter based on format string, writing to stdout.

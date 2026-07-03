@@ -119,6 +119,8 @@ Exit codes: 0 success, 1 operational, 70 internal, 80 usage/parse. `CLIError.Exi
 
 Every error path funnels through `render()` in `cmd/render.go`: structured mode (json/toon) writes the `{"error": {...}}` envelope to stdout with nothing on stderr; the exit code comes from the returned error. Command handlers just `return` a `*CLIError`.
 
+**Classify errors at the boundary.** `render()` treats any non-CLIError as `internal` (exit 70, "please report it"). That fallback is a last resort, not a classifier: code that talks to the outside world (`handleAPIError`, subprocess runners like `execSSH`/`execGit`) must map its own failures to operational codes before returning. Unwrap with `errors.As`, never a type assertion — the api package wraps errors with `%w`.
+
 ### Output
 Default output is TOON. The `--output` flag supports:
 - `toon` (default) - Token-Oriented Object Notation, ~50% fewer tokens than JSON

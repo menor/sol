@@ -260,30 +260,51 @@ cache:
 | `UPSUN_PROJECT` | Default project ID |
 | `UPSUN_ENVIRONMENT` | Default environment |
 
-## Error Format
+## Errors
 
-All errors return structured JSON:
+Errors are structured and rendered in the active output format, same as success output. A caller that asked for a machine format reads exactly one stream: the error envelope goes to **stdout**, and stderr carries only progress and `--debug` logs.
 
 ```json
 {
   "error": {
-    "code": "AUTH_EXPIRED",
-    "message": "Authentication expired and refresh failed",
-    "details": {
-      "hint": "Run 'sol auth:login' to re-authenticate"
-    }
+    "code": "no_project_specified",
+    "message": "no project specified",
+    "hint": "Use --project or run from within a project directory",
+    "retryable": false
   }
 }
 ```
 
-## Exit Codes
+| Field | Description |
+|-------|-------------|
+| `code` | Stable identifier from the closed set below. Branch on this, never on message text. |
+| `message` | Human-readable description |
+| `hint` | Actionable next step; omitted when there is none |
+| `retryable` | `true` if the identical call may later succeed |
+| `details` | Optional extra context (e.g. `status_code`); omitted when empty |
+
+### Error Codes
 
 | Code | Meaning |
 |------|---------|
-| 0 | Success |
-| 1 | User error (bad input, auth failed) |
-| 2 | API error (server error, network issue) |
-| 3 | Internal error (bug in CLI) |
+| `unauthenticated` | Not authenticated, or authentication expired |
+| `no_project_specified` | No project resolved from flag or environment |
+| `no_environment_specified` | No environment resolved from flag or environment |
+| `not_found` | Resource does not exist |
+| `invalid_argument` | Invalid input value or malformed invocation |
+| `permission_denied` | Authenticated but not allowed |
+| `api_unavailable` | Upsun API unreachable, 5xx, or rate-limited (retryable) |
+| `operation_failed` | A remote operation failed, was cancelled, or timed out (timeout is retryable) |
+| `internal` | Bug in Sol itself |
+
+## Exit Codes
+
+| Code | Meaning | What a caller should do |
+|------|---------|-------------------------|
+| 0 | Success | Parse stdout |
+| 1 | Operational error | Recoverable — read `code` and `hint`, act on them |
+| 70 | Internal error (bug, panic) | Do not retry blindly; report it |
+| 80 | Usage / parse error | Fix the invocation |
 
 ## Development
 

@@ -39,7 +39,10 @@ func TestExitCode(t *testing.T) {
 	}
 }
 
-func TestJSON(t *testing.T) {
+// The envelope field contract is governed by the struct's json tags. Errors
+// now render through the shared output formatter (see cmd.render), so these
+// tests marshal the struct directly rather than through a bespoke method.
+func TestCLIErrorMarshalsEnvelopeFields(t *testing.T) {
 	err := &CLIError{
 		Code:    CodeInvalidArgument,
 		Message: "something went wrong",
@@ -47,66 +50,64 @@ func TestJSON(t *testing.T) {
 		Details: map[string]any{"key": "value"},
 	}
 
-	data, jsonErr := err.JSON()
+	data, jsonErr := json.Marshal(err)
 	if jsonErr != nil {
-		t.Fatalf("JSON() returned error: %v", jsonErr)
+		t.Fatalf("Marshal returned error: %v", jsonErr)
 	}
 
 	var result map[string]any
 	if parseErr := json.Unmarshal(data, &result); parseErr != nil {
-		t.Fatalf("JSON() produced invalid JSON: %v", parseErr)
+		t.Fatalf("produced invalid JSON: %v", parseErr)
 	}
 
-	errorObj, ok := result["error"].(map[string]any)
-	if !ok {
-		t.Fatal("JSON() missing 'error' wrapper")
+	if result["code"] != CodeInvalidArgument {
+		t.Errorf("code = %v, want %s", result["code"], CodeInvalidArgument)
 	}
-
-	if errorObj["code"] != CodeInvalidArgument {
-		t.Errorf("code = %v, want %s", errorObj["code"], CodeInvalidArgument)
+	if result["message"] != "something went wrong" {
+		t.Errorf("message = %v, want 'something went wrong'", result["message"])
 	}
-	if errorObj["message"] != "something went wrong" {
-		t.Errorf("message = %v, want 'something went wrong'", errorObj["message"])
-	}
-	if errorObj["hint"] != "try this instead" {
-		t.Errorf("hint = %v, want 'try this instead'", errorObj["hint"])
+	if result["hint"] != "try this instead" {
+		t.Errorf("hint = %v, want 'try this instead'", result["hint"])
 	}
 	// retryable is always present, even when false.
-	if _, exists := errorObj["retryable"]; !exists {
-		t.Error("JSON() should always include 'retryable'")
+	if _, exists := result["retryable"]; !exists {
+		t.Error("marshaled error should always include 'retryable'")
 	}
 
-	details, ok := errorObj["details"].(map[string]any)
+	details, ok := result["details"].(map[string]any)
 	if !ok {
-		t.Fatal("JSON() missing 'details'")
+		t.Fatal("marshaled error missing 'details'")
 	}
 	if details["key"] != "value" {
 		t.Errorf("details.key = %v, want 'value'", details["key"])
 	}
 }
 
-func TestJSONOmitsEmptyHintAndDetails(t *testing.T) {
+func TestCLIErrorOmitsEmptyHintAndDetails(t *testing.T) {
 	err := &CLIError{
 		Code:    CodeInvalidArgument,
 		Message: "no extras",
 	}
 
-	data, jsonErr := err.JSON()
+	data, jsonErr := json.Marshal(err)
 	if jsonErr != nil {
-		t.Fatalf("JSON() returned error: %v", jsonErr)
+		t.Fatalf("Marshal returned error: %v", jsonErr)
 	}
 
 	var result map[string]any
 	if parseErr := json.Unmarshal(data, &result); parseErr != nil {
-		t.Fatalf("JSON() produced invalid JSON: %v", parseErr)
+		t.Fatalf("produced invalid JSON: %v", parseErr)
 	}
 
-	errorObj := result["error"].(map[string]any)
-	if _, exists := errorObj["details"]; exists {
-		t.Error("JSON() should omit empty details")
+	if _, exists := result["details"]; exists {
+		t.Error("should omit empty details")
 	}
-	if _, exists := errorObj["hint"]; exists {
-		t.Error("JSON() should omit empty hint")
+	if _, exists := result["hint"]; exists {
+		t.Error("should omit empty hint")
+	}
+	// retryable stays present even when false — it carries the retry signal.
+	if _, exists := result["retryable"]; !exists {
+		t.Error("retryable must always be present")
 	}
 }
 

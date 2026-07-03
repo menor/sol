@@ -46,9 +46,9 @@ func (e *Environment) ToSummary() EnvironmentSummary {
 
 // HTTPAccess contains HTTP access settings for an environment.
 type HTTPAccess struct {
-	IsEnabled   bool              `json:"is_enabled"`
-	Addresses   []AccessAddress   `json:"addresses,omitempty"`
-	BasicAuth   map[string]string `json:"basic_auth,omitempty"`
+	IsEnabled bool              `json:"is_enabled"`
+	Addresses []AccessAddress   `json:"addresses,omitempty"`
+	BasicAuth map[string]string `json:"basic_auth,omitempty"`
 }
 
 // AccessAddress represents an IP allowlist entry.

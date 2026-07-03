@@ -145,7 +145,7 @@ var validTypeFormat = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9-]*:[a-zA-Z0-9.]+$`
 var knownServiceTypes = map[string]bool{
 	"mysql": true, "mariadb": true, "oracle-mysql": true,
 	"postgresql": true,
-	"redis": true, "redis-persistent": true,
+	"redis":      true, "redis-persistent": true,
 	"memcached":       true,
 	"elasticsearch":   true,
 	"opensearch":      true,

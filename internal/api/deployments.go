@@ -10,12 +10,12 @@ import (
 // Deployment represents the current deployment state of an environment.
 // Retrieved from /projects/{id}/environments/{env}/deployments/current
 type Deployment struct {
-	ID       string              `json:"id"`
-	Services map[string]Service  `json:"services"`
-	Webapps  map[string]Webapp   `json:"webapps"`
-	Workers  map[string]Worker   `json:"workers,omitempty"`
-	Routes   map[string]Route    `json:"routes"`
-	Links    HALLinks            `json:"_links"`
+	ID       string             `json:"id"`
+	Services map[string]Service `json:"services"`
+	Webapps  map[string]Webapp  `json:"webapps"`
+	Workers  map[string]Worker  `json:"workers,omitempty"`
+	Routes   map[string]Route   `json:"routes"`
+	Links    HALLinks           `json:"_links"`
 }
 
 // Service represents a backing service (database, cache, search, etc.)
@@ -68,9 +68,9 @@ type Webapp struct {
 
 // Worker represents a background worker process.
 type Worker struct {
-	Type   string              `json:"type"`
-	Size   string              `json:"size,omitempty"`
-	Mounts map[string]Mount    `json:"mounts,omitempty"`
+	Type   string           `json:"type"`
+	Size   string           `json:"size,omitempty"`
+	Mounts map[string]Mount `json:"mounts,omitempty"`
 }
 
 // Mount represents a filesystem mount.
@@ -81,14 +81,14 @@ type Mount struct {
 
 // Route represents a URL route configuration.
 type Route struct {
-	Primary     bool                `json:"primary"`
-	ID          string              `json:"id"`
-	Type        string              `json:"type"`
-	OriginalURL string              `json:"original_url"`
-	Upstream    string              `json:"upstream,omitempty"`
-	To          string              `json:"to,omitempty"`
-	Redirects   *RouteRedirects     `json:"redirects,omitempty"`
-	TLS         *RouteTLS           `json:"tls,omitempty"`
+	Primary     bool            `json:"primary"`
+	ID          string          `json:"id"`
+	Type        string          `json:"type"`
+	OriginalURL string          `json:"original_url"`
+	Upstream    string          `json:"upstream,omitempty"`
+	To          string          `json:"to,omitempty"`
+	Redirects   *RouteRedirects `json:"redirects,omitempty"`
+	TLS         *RouteTLS       `json:"tls,omitempty"`
 }
 
 // RouteRedirects contains redirect configuration.

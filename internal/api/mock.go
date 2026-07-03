@@ -10,13 +10,13 @@ type MockClient struct {
 	GetProjectFunc   func(ctx context.Context, projectID string) (*Project, error)
 
 	// Environment methods
-	ListEnvironmentsFunc       func(ctx context.Context, projectID string) ([]Environment, error)
-	GetEnvironmentFunc         func(ctx context.Context, projectID, environmentID string) (*Environment, error)
-	ActivateEnvironmentFunc    func(ctx context.Context, projectID, environmentID string) (*Activity, error)
-	DeactivateEnvironmentFunc  func(ctx context.Context, projectID, environmentID string) (*Activity, error)
-	DeleteEnvironmentFunc      func(ctx context.Context, projectID, environmentID string) error
-	RedeployEnvironmentFunc    func(ctx context.Context, projectID, environmentID string) (*Activity, error)
-	BranchEnvironmentFunc      func(ctx context.Context, projectID, parentEnvID string, input *BranchInput) (*Activity, error)
+	ListEnvironmentsFunc      func(ctx context.Context, projectID string) ([]Environment, error)
+	GetEnvironmentFunc        func(ctx context.Context, projectID, environmentID string) (*Environment, error)
+	ActivateEnvironmentFunc   func(ctx context.Context, projectID, environmentID string) (*Activity, error)
+	DeactivateEnvironmentFunc func(ctx context.Context, projectID, environmentID string) (*Activity, error)
+	DeleteEnvironmentFunc     func(ctx context.Context, projectID, environmentID string) error
+	RedeployEnvironmentFunc   func(ctx context.Context, projectID, environmentID string) (*Activity, error)
+	BranchEnvironmentFunc     func(ctx context.Context, projectID, parentEnvID string, input *BranchInput) (*Activity, error)
 
 	// Activity methods
 	ListActivitiesFunc func(ctx context.Context, projectID string, opts *ListActivitiesOptions) ([]Activity, error)

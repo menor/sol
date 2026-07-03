@@ -120,12 +120,12 @@ func (c *BackupCreateCmd) Run(ctx *Context) error {
 
 // BackupRestoreCmd restores a backup.
 type BackupRestoreCmd struct {
-	BackupID        string `arg:"" required:"" help:"Backup ID to restore"`
-	EnvironmentID   string `arg:"" optional:"" help:"Source environment ID (uses --environment or PLATFORM_BRANCH if not specified)"`
-	Target          string `help:"Target environment name (defaults to source environment)" short:"t"`
-	BranchFrom      string `help:"Parent branch for new environment (required if target is new)" short:"b"`
-	RestoreCode     bool   `help:"Restore code from backup (default: true)" default:"true"`
-	Wait            bool   `help:"Wait for restore to complete" short:"w"`
+	BackupID      string `arg:"" required:"" help:"Backup ID to restore"`
+	EnvironmentID string `arg:"" optional:"" help:"Source environment ID (uses --environment or PLATFORM_BRANCH if not specified)"`
+	Target        string `help:"Target environment name (defaults to source environment)" short:"t"`
+	BranchFrom    string `help:"Parent branch for new environment (required if target is new)" short:"b"`
+	RestoreCode   bool   `help:"Restore code from backup (default: true)" default:"true"`
+	Wait          bool   `help:"Wait for restore to complete" short:"w"`
 }
 
 // Run executes the backup:restore command.

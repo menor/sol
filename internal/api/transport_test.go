@@ -234,11 +234,11 @@ func TestCalculateDelay(t *testing.T) {
 		attempt  int
 		expected time.Duration
 	}{
-		{1, 100 * time.Millisecond},  // base * 2^0 = 100ms
-		{2, 200 * time.Millisecond},  // base * 2^1 = 200ms
-		{3, 400 * time.Millisecond},  // base * 2^2 = 400ms
-		{4, 800 * time.Millisecond},  // base * 2^3 = 800ms
-		{5, 1 * time.Second},         // base * 2^4 = 1600ms, capped at 1s
+		{1, 100 * time.Millisecond}, // base * 2^0 = 100ms
+		{2, 200 * time.Millisecond}, // base * 2^1 = 200ms
+		{3, 400 * time.Millisecond}, // base * 2^2 = 400ms
+		{4, 800 * time.Millisecond}, // base * 2^3 = 800ms
+		{5, 1 * time.Second},        // base * 2^4 = 1600ms, capped at 1s
 	}
 
 	for _, tt := range tests {
@@ -257,10 +257,10 @@ func TestIsRetryableStatus(t *testing.T) {
 		{200, false},
 		{201, false},
 		{400, false},
-		{401, true},  // Unauthorized - retry with token refresh
+		{401, true}, // Unauthorized - retry with token refresh
 		{403, false},
 		{404, false},
-		{429, true},  // Rate limited
+		{429, true}, // Rate limited
 		{500, true},
 		{502, true},
 		{503, true},

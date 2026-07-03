@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/menor/sol/internal/api"
+	"github.com/menor/sol/internal/auth"
 	"github.com/menor/sol/internal/errors"
 )
 
@@ -81,6 +82,19 @@ func handleAPIError(err error, resourceType, resourceID string) error {
 			return errors.NewNotFoundError(resourceType, resourceID)
 		}
 		return errors.NewAPIError(apiErr.Message, apiErr.StatusCode)
+	}
+
+	// UPSUN_TOKEN exchange failures happen inside the transport's RoundTrip,
+	// so http.Client hands them back wrapped in *url.Error. Check the auth
+	// sentinels before the transport branch, or a rejected API token would
+	// misclassify as api_unavailable and be marked retryable.
+	if stderrors.Is(err, auth.ErrInvalidAPIToken) {
+		return errors.NewAuthError(err.Error()).
+			WithHint("Check that " + auth.EnvTokenVar + " contains a valid API token from the Upsun Console")
+	}
+	if stderrors.Is(err, auth.ErrExchangeUnavailable) {
+		return errors.NewAPIUnreachableError(err.Error()).
+			WithHint("The Upsun auth server could not complete the token exchange; retry")
 	}
 
 	// http.Client wraps every request failure in *url.Error; also catch bare

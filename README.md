@@ -74,7 +74,9 @@ sol auth:info
 sol auth:logout
 ```
 
-For CI/automated environments, use an API token instead of interactive login:
+For CI/automated environments, use an API token instead of interactive login.
+Create one in the Upsun Console under Profile → My Profile → API Tokens.
+Sol exchanges it for a short-lived access token automatically:
 
 ```bash
 export UPSUN_TOKEN=your-api-token
@@ -256,7 +258,7 @@ cache:
 
 | Variable | Description |
 |----------|-------------|
-| `UPSUN_TOKEN` | API token (overrides keychain) |
+| `UPSUN_TOKEN` | Console API token, exchanged automatically (overrides keychain) |
 | `UPSUN_PROJECT` | Default project ID |
 | `UPSUN_ENVIRONMENT` | Default environment |
 

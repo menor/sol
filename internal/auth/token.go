@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"golang.org/x/oauth2"
 )
@@ -12,6 +13,8 @@ import (
 // EnvTokenVar is the environment variable checked for API tokens.
 // When set, it takes precedence over the keyring token.
 // This is the preferred authentication method for CI/automated environments.
+// The value is a Console API token, not an access token: it is exchanged at
+// the auth server for a short-lived access token on first use.
 const EnvTokenVar = "UPSUN_TOKEN"
 
 // TokenSource returns an oauth2.TokenSource that provides access tokens.
@@ -24,7 +27,11 @@ const EnvTokenVar = "UPSUN_TOKEN"
 func TokenSource(ctx context.Context) (oauth2.TokenSource, error) {
 	// Check environment variable first (CI path)
 	if envToken := os.Getenv(EnvTokenVar); envToken != "" {
-		return &envTokenSource{token: envToken}, nil
+		return &envTokenSource{
+			ctx:      ctx,
+			apiToken: envToken,
+			tokenURL: TokenURL,
+		}, nil
 	}
 
 	// Fall back to keyring (interactive path)
@@ -42,18 +49,43 @@ func TokenSource(ctx context.Context) (oauth2.TokenSource, error) {
 	}, nil
 }
 
-// envTokenSource provides tokens from the UPSUN_TOKEN environment variable.
-// These tokens don't expire (they're API tokens, not OAuth tokens).
+// exchangeRefreshBuffer is how long before expiry the cached access token is
+// re-exchanged, so in-flight requests don't ride a token that dies mid-call.
+const exchangeRefreshBuffer = 60 * time.Second
+
+// envTokenSource exchanges the UPSUN_TOKEN API token for a short-lived
+// access token and caches it in memory, re-exchanging near expiry.
+// The exchanged token is never persisted: the env var path serves CI,
+// where keyrings are absent.
+//
+// CONTEXT LIMITATION: This struct stores a context.Context, which is generally
+// an anti-pattern in Go. However, this is a constraint of the oauth2.TokenSource
+// interface, which doesn't accept context in its Token() method. If the stored
+// context is cancelled before Token() is called, exchange operations will fail.
 type envTokenSource struct {
-	token string
+	ctx      context.Context
+	apiToken string
+	tokenURL string // TokenURL in production; overridden in tests
+
+	mu     sync.Mutex
+	cached *oauth2.Token
 }
 
 func (s *envTokenSource) Token() (*oauth2.Token, error) {
-	return &oauth2.Token{
-		AccessToken: s.token,
-		TokenType:   "Bearer",
-		// No expiry - API tokens don't expire
-	}, nil
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.cached != nil && time.Until(s.cached.Expiry) > exchangeRefreshBuffer {
+		return s.cached, nil
+	}
+
+	token, err := ExchangeAPIToken(s.ctx, s.tokenURL, ClientID, s.apiToken)
+	if err != nil {
+		return nil, fmt.Errorf("exchange %s: %w", EnvTokenVar, err)
+	}
+
+	s.cached = token
+	return token, nil
 }
 
 // keyringTokenSource provides tokens from the keyring with automatic refresh.

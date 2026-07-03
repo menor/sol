@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.2.0 - 2026-07-03
 
 ### Breaking changes
 
@@ -20,6 +20,7 @@
 - Transient network failures (DNS, refused connection, timeout) and errors wrapped by the API layer now classify into their operational codes (`api_unavailable`, `unauthenticated`, ...) instead of reporting as `internal` with exit 70.
 - HTTP 429 rate limiting now maps to `api_unavailable` with `retryable: true`, matching the documented contract, instead of `invalid_argument`.
 - A remote command exiting non-zero over `sol ssh` and a rejected `sol push` now report `operation_failed` (exit 1) with the status in `details.exit_code`, instead of `internal` (exit 70).
+- Cancelling a request (Ctrl-C) now reports `operation_failed` instead of `internal` (exit 70).
 - An unknown command combined with `--schema` now exits 80 with `invalid_argument`, consistent with other malformed invocations.
 - The attached short-flag form (`-ojson`) is honored on error render paths, and invalid `--output` values fall back to the default format instead of producing unformatted output.
 - Panic errors now carry the stack trace in `details.stack`.

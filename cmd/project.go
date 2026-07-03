@@ -92,5 +92,12 @@ func handleAPIError(err error, resourceType, resourceID string) error {
 		return errors.NewAPIUnreachableError(err.Error())
 	}
 
+	// Cancellation (e.g. Ctrl-C between requests) is the caller's doing, not
+	// a Sol bug. Retryable: the identical call succeeds if not cancelled.
+	if stderrors.Is(err, context.Canceled) {
+		return errors.NewOperationFailedError("operation cancelled").
+			WithRetryable(true)
+	}
+
 	return errors.NewInternalError(err.Error())
 }

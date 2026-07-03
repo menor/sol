@@ -196,6 +196,11 @@ func TestHandleAPIError_Classification(t *testing.T) {
 			errors.CodeAPIUnavailable, true,
 		},
 		{
+			"cancellation is operation_failed, not internal",
+			fmt.Errorf("execute request: %w", context.Canceled),
+			errors.CodeOperationFailed, true,
+		},
+		{
 			"unclassifiable error falls through to internal",
 			stderrors.New("something unexpected"),
 			errors.CodeInternal, false,

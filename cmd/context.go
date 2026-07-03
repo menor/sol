@@ -150,7 +150,9 @@ func (c *Context) WaitForActivity(client api.API, projectID, activityID string) 
 		// Wait before next poll
 		select {
 		case <-c.Done():
-			return nil, c.Err()
+			// Same classification as a poll failure — a raw context error
+			// would reach render() as internal (exit 70).
+			return nil, handleAPIError(c.Err(), "activity", activityID)
 		case <-time.After(pollInterval):
 		}
 	}

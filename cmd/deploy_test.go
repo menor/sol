@@ -12,13 +12,13 @@ func TestEnvironmentActivateCmd_Success(t *testing.T) {
 	mockClient := &api.MockClient{
 		ActivateEnvironmentFunc: func(ctx context.Context, projectID, envID string) (*api.Activity, error) {
 			return &api.Activity{
-				ID:          "act123",
-				Type:        "environment.activate",
-				State:       "pending",
-				Description: "Activating environment",
-				Project:     projectID,
+				ID:           "act123",
+				Type:         "environment.activate",
+				State:        "pending",
+				Description:  "Activating environment",
+				Project:      projectID,
 				Environments: []string{envID},
-				CreatedAt:   time.Now(),
+				CreatedAt:    time.Now(),
 			}, nil
 		},
 	}
@@ -100,13 +100,13 @@ func TestEnvironmentDeactivateCmd_Success(t *testing.T) {
 	mockClient := &api.MockClient{
 		DeactivateEnvironmentFunc: func(ctx context.Context, projectID, envID string) (*api.Activity, error) {
 			return &api.Activity{
-				ID:          "act456",
-				Type:        "environment.deactivate",
-				State:       "pending",
-				Description: "Deactivating environment",
-				Project:     projectID,
+				ID:           "act456",
+				Type:         "environment.deactivate",
+				State:        "pending",
+				Description:  "Deactivating environment",
+				Project:      projectID,
 				Environments: []string{envID},
-				CreatedAt:   time.Now(),
+				CreatedAt:    time.Now(),
 			}, nil
 		},
 	}
@@ -214,13 +214,13 @@ func TestRedeployCmd_Success(t *testing.T) {
 	mockClient := &api.MockClient{
 		RedeployEnvironmentFunc: func(ctx context.Context, projectID, envID string) (*api.Activity, error) {
 			return &api.Activity{
-				ID:          "act789",
-				Type:        "environment.redeploy",
-				State:       "pending",
-				Description: "Redeploying environment",
-				Project:     projectID,
+				ID:           "act789",
+				Type:         "environment.redeploy",
+				State:        "pending",
+				Description:  "Redeploying environment",
+				Project:      projectID,
 				Environments: []string{envID},
-				CreatedAt:   time.Now(),
+				CreatedAt:    time.Now(),
 			}, nil
 		},
 	}

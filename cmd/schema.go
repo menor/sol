@@ -47,9 +47,9 @@ type ArgumentSchema struct {
 
 // OutputSchema describes the command output structure.
 type OutputSchema struct {
-	Type       string                  `json:"type"`
+	Type       string                    `json:"type"`
 	Properties map[string]PropertySchema `json:"properties,omitempty"`
-	Items      *OutputSchema           `json:"items,omitempty"`
+	Items      *OutputSchema             `json:"items,omitempty"`
 }
 
 // PropertySchema describes a single output property.
@@ -689,13 +689,13 @@ var commandSchemas = map[string]CommandSchema{
 			Type: "object",
 			Properties: map[string]PropertySchema{
 				"id":              {Type: "string", Description: "Backup ID"},
-				"created_at":     {Type: "string", Description: "Creation timestamp"},
-				"expires_at":     {Type: "string", Description: "Expiration timestamp"},
-				"safe":           {Type: "boolean", Description: "Whether backup is consistent"},
-				"automated":      {Type: "boolean", Description: "Whether backup was automated"},
-				"restorable":     {Type: "boolean", Description: "Whether backup can be restored"},
-				"commit_id":      {Type: "string", Description: "Git commit ID"},
-				"environment":    {Type: "string", Description: "Source environment"},
+				"created_at":      {Type: "string", Description: "Creation timestamp"},
+				"expires_at":      {Type: "string", Description: "Expiration timestamp"},
+				"safe":            {Type: "boolean", Description: "Whether backup is consistent"},
+				"automated":       {Type: "boolean", Description: "Whether backup was automated"},
+				"restorable":      {Type: "boolean", Description: "Whether backup can be restored"},
+				"commit_id":       {Type: "string", Description: "Git commit ID"},
+				"environment":     {Type: "string", Description: "Source environment"},
 				"size_of_volumes": {Type: "integer", Description: "Backup size in bytes"},
 			},
 		},

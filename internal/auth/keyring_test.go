@@ -7,7 +7,6 @@ import (
 	"github.com/zalando/go-keyring"
 )
 
-
 func TestStoredTokenIsExpired(t *testing.T) {
 	tests := []struct {
 		name   string

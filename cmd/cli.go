@@ -26,26 +26,26 @@ type CLI struct {
 	Schema      bool   `help:"Output command schema instead of running"`
 
 	// Commands
-	Version         VersionCmd         `cmd:"" name:"version" help:"Print version information"`
-	AuthLogin       AuthLoginCmd       `cmd:"" name:"auth:login" help:"Log in to Upsun"`
-	AuthLogout      AuthLogoutCmd      `cmd:"" name:"auth:logout" help:"Log out of Upsun"`
-	AuthInfo        AuthInfoCmd        `cmd:"" name:"auth:info" help:"Show authentication status"`
-	ProjectList     ProjectListCmd     `cmd:"" name:"project:list" aliases:"projects" help:"List all projects"`
-	ProjectInfo     ProjectInfoCmd     `cmd:"" name:"project:info" aliases:"project" help:"Show project details"`
-	EnvironmentList       EnvironmentListCmd       `cmd:"" name:"environment:list" aliases:"environments,env:list" help:"List environments"`
-	EnvironmentInfo       EnvironmentInfoCmd       `cmd:"" name:"environment:info" aliases:"env:info" help:"Show environment details"`
-	EnvironmentBranch     EnvironmentBranchCmd     `cmd:"" name:"environment:branch" aliases:"env:branch" help:"Create a new branch environment"`
-	EnvironmentActivate   EnvironmentActivateCmd   `cmd:"" name:"environment:activate" aliases:"env:activate" help:"Activate an environment"`
-	EnvironmentDeactivate EnvironmentDeactivateCmd `cmd:"" name:"environment:deactivate" aliases:"env:deactivate" help:"Deactivate an environment"`
-	EnvironmentDelete     EnvironmentDeleteCmd     `cmd:"" name:"environment:delete" aliases:"env:delete" help:"Delete an environment"`
-	Redeploy              RedeployCmd              `cmd:"" name:"redeploy" help:"Redeploy an environment"`
-	Push                  PushCmd                  `cmd:"" name:"push" help:"Push code to trigger deployment"`
-	ActivityList    ActivityListCmd    `cmd:"" name:"activity:list" aliases:"activities,act:list" help:"List activities"`
-	ActivityLog     ActivityLogCmd     `cmd:"" name:"activity:log" aliases:"act:log" help:"Show activity log"`
-	VariableList    VariableListCmd    `cmd:"" name:"variable:list" aliases:"variables,var:list" help:"List variables"`
-	VariableGet     VariableGetCmd     `cmd:"" name:"variable:get" aliases:"var:get" help:"Get a variable"`
-	VariableSet     VariableSetCmd     `cmd:"" name:"variable:set" aliases:"var:set" help:"Set a variable"`
-	VariableDelete  VariableDeleteCmd  `cmd:"" name:"variable:delete" aliases:"var:delete" help:"Delete a variable"`
+	Version                  VersionCmd                  `cmd:"" name:"version" help:"Print version information"`
+	AuthLogin                AuthLoginCmd                `cmd:"" name:"auth:login" help:"Log in to Upsun"`
+	AuthLogout               AuthLogoutCmd               `cmd:"" name:"auth:logout" help:"Log out of Upsun"`
+	AuthInfo                 AuthInfoCmd                 `cmd:"" name:"auth:info" help:"Show authentication status"`
+	ProjectList              ProjectListCmd              `cmd:"" name:"project:list" aliases:"projects" help:"List all projects"`
+	ProjectInfo              ProjectInfoCmd              `cmd:"" name:"project:info" aliases:"project" help:"Show project details"`
+	EnvironmentList          EnvironmentListCmd          `cmd:"" name:"environment:list" aliases:"environments,env:list" help:"List environments"`
+	EnvironmentInfo          EnvironmentInfoCmd          `cmd:"" name:"environment:info" aliases:"env:info" help:"Show environment details"`
+	EnvironmentBranch        EnvironmentBranchCmd        `cmd:"" name:"environment:branch" aliases:"env:branch" help:"Create a new branch environment"`
+	EnvironmentActivate      EnvironmentActivateCmd      `cmd:"" name:"environment:activate" aliases:"env:activate" help:"Activate an environment"`
+	EnvironmentDeactivate    EnvironmentDeactivateCmd    `cmd:"" name:"environment:deactivate" aliases:"env:deactivate" help:"Deactivate an environment"`
+	EnvironmentDelete        EnvironmentDeleteCmd        `cmd:"" name:"environment:delete" aliases:"env:delete" help:"Delete an environment"`
+	Redeploy                 RedeployCmd                 `cmd:"" name:"redeploy" help:"Redeploy an environment"`
+	Push                     PushCmd                     `cmd:"" name:"push" help:"Push code to trigger deployment"`
+	ActivityList             ActivityListCmd             `cmd:"" name:"activity:list" aliases:"activities,act:list" help:"List activities"`
+	ActivityLog              ActivityLogCmd              `cmd:"" name:"activity:log" aliases:"act:log" help:"Show activity log"`
+	VariableList             VariableListCmd             `cmd:"" name:"variable:list" aliases:"variables,var:list" help:"List variables"`
+	VariableGet              VariableGetCmd              `cmd:"" name:"variable:get" aliases:"var:get" help:"Get a variable"`
+	VariableSet              VariableSetCmd              `cmd:"" name:"variable:set" aliases:"var:set" help:"Set a variable"`
+	VariableDelete           VariableDeleteCmd           `cmd:"" name:"variable:delete" aliases:"var:delete" help:"Delete a variable"`
 	SSH                      SSHCmd                      `cmd:"" name:"ssh" help:"SSH into an environment"`
 	ServiceList              ServiceListCmd              `cmd:"" name:"service:list" aliases:"services" help:"List services in an environment"`
 	AppList                  AppListCmd                  `cmd:"" name:"app:list" aliases:"apps" help:"List applications in an environment"`

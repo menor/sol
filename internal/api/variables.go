@@ -9,20 +9,20 @@ import (
 
 // Variable represents a Upsun project or environment variable.
 type Variable struct {
-	ID                string     `json:"id"`
-	Name              string     `json:"name"`
-	Value             string     `json:"value,omitempty"`
-	IsSensitive       bool       `json:"is_sensitive"`
-	IsEnabled         bool       `json:"is_enabled"`
-	IsInheritable     bool       `json:"is_inheritable"`
-	VisibleBuild      bool       `json:"visible_build"`
-	VisibleRuntime    bool       `json:"visible_runtime"`
-	InheritedFrom     string     `json:"inherited_from,omitempty"`
-	Project           string     `json:"project,omitempty"`
-	Environment       string     `json:"environment,omitempty"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
-	Links             HALLinks   `json:"_links"`
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Value          string    `json:"value,omitempty"`
+	IsSensitive    bool      `json:"is_sensitive"`
+	IsEnabled      bool      `json:"is_enabled"`
+	IsInheritable  bool      `json:"is_inheritable"`
+	VisibleBuild   bool      `json:"visible_build"`
+	VisibleRuntime bool      `json:"visible_runtime"`
+	InheritedFrom  string    `json:"inherited_from,omitempty"`
+	Project        string    `json:"project,omitempty"`
+	Environment    string    `json:"environment,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	Links          HALLinks  `json:"_links"`
 }
 
 // VariableInput is the input for creating or updating a variable.

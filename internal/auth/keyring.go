@@ -26,9 +26,9 @@ const TokenExpiryBuffer = 30 * time.Second
 type StoredToken struct {
 	AccessToken  string    `json:"access_token"`
 	RefreshToken string    `json:"refresh_token"`
-	TokenType    string    `json:"token_type"`    // Usually "Bearer"
-	Expiry       time.Time `json:"expiry"`        // When access token expires
-	Scope        string    `json:"scope"`         // OAuth scopes granted
+	TokenType    string    `json:"token_type"` // Usually "Bearer"
+	Expiry       time.Time `json:"expiry"`     // When access token expires
+	Scope        string    `json:"scope"`      // OAuth scopes granted
 }
 
 // IsExpired returns true if the access token has expired.

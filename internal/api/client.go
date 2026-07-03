@@ -273,7 +273,6 @@ func (c *Client) resolveURL(urlPath string) *url.URL {
 	return c.baseURL.ResolveReference(ref)
 }
 
-
 // parseAPIError creates an error from an API error response.
 func parseAPIError(statusCode int, body []byte) error {
 	// Try to parse as JSON error

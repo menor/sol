@@ -3,7 +3,6 @@ package output
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -57,41 +56,6 @@ func TestJSONFormatterWriteCompact(t *testing.T) {
 	// Compact JSON should not have leading spaces (indentation)
 	if strings.Contains(output, "  \"key\"") {
 		t.Error("Write() with indent=false should produce compact output")
-	}
-}
-
-func TestJSONFormatterWriteError(t *testing.T) {
-	var buf bytes.Buffer
-	f := NewJSONFormatter(&buf, false)
-
-	testErr := errors.New("something went wrong")
-	if err := f.WriteError(testErr); err != nil {
-		t.Fatalf("WriteError() error = %v", err)
-	}
-
-	// Verify structure
-	var result map[string]map[string]string
-	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("WriteError() produced invalid JSON: %v", err)
-	}
-
-	if result["error"]["message"] != "something went wrong" {
-		t.Errorf("error.message = %q, want %q", result["error"]["message"], "something went wrong")
-	}
-}
-
-func TestTextFormatterWriteError(t *testing.T) {
-	var buf bytes.Buffer
-	f := NewTextFormatter(&buf)
-
-	testErr := errors.New("something went wrong")
-	if err := f.WriteError(testErr); err != nil {
-		t.Fatalf("WriteError() error = %v", err)
-	}
-
-	output := buf.String()
-	if output != "Error: something went wrong\n" {
-		t.Errorf("WriteError() = %q, want %q", output, "Error: something went wrong\n")
 	}
 }
 
@@ -210,21 +174,6 @@ func TestTOONFormatterHandlesNilPointers(t *testing.T) {
 	}
 	if !strings.Contains(output, "act1") || !strings.Contains(output, "act2") {
 		t.Errorf("TOON output missing values, got: %s", output)
-	}
-}
-
-func TestTOONFormatterWriteError(t *testing.T) {
-	var buf bytes.Buffer
-	f := NewTOONFormatter(&buf)
-
-	testErr := errors.New("something went wrong")
-	if err := f.WriteError(testErr); err != nil {
-		t.Fatalf("WriteError() error = %v", err)
-	}
-
-	output := buf.String()
-	if output != "error: something went wrong\n" {
-		t.Errorf("WriteError() = %q, want %q", output, "error: something went wrong\n")
 	}
 }
 

@@ -46,7 +46,8 @@ func (c *PushCmd) Run(ctx *Context) error {
 	}
 
 	if err := execGit(ctx, args...); err != nil {
-		return errors.NewInternalError("git push failed").
+		// A rejected push is an operational failure (exit 1), not a Sol bug.
+		return errors.NewOperationFailedError("git push failed").
 			WithDetail("cause", err.Error()).
 			WithHint("Ensure you have push access to the repository")
 	}

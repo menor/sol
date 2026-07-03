@@ -1,6 +1,46 @@
 package cmd
 
-import "testing"
+import (
+	stderrors "errors"
+	"os/exec"
+	"testing"
+
+	"github.com/menor/sol/internal/errors"
+)
+
+// A remote command's non-zero exit is operation_failed (exit 1) with the
+// status in details.exit_code — never internal (exit 70).
+func TestClassifySSHError(t *testing.T) {
+	if err := classifySSHError(nil); err != nil {
+		t.Fatalf("nil should stay nil, got %v", err)
+	}
+
+	// Produce a genuine *exec.ExitError with a known status.
+	runErr := exec.Command("sh", "-c", "exit 3").Run()
+	if runErr == nil {
+		t.Fatal("expected sh to exit non-zero")
+	}
+
+	var cliErr *errors.CLIError
+	if !stderrors.As(classifySSHError(runErr), &cliErr) {
+		t.Fatal("expected *errors.CLIError")
+	}
+	if cliErr.Code != errors.CodeOperationFailed {
+		t.Errorf("Code = %q, want %q", cliErr.Code, errors.CodeOperationFailed)
+	}
+	if cliErr.Details["exit_code"] != 3 {
+		t.Errorf("details.exit_code = %v, want 3", cliErr.Details["exit_code"])
+	}
+
+	// Anything that is not an exit status (ssh never started) is internal.
+	var internalErr *errors.CLIError
+	if !stderrors.As(classifySSHError(stderrors.New("fork failed")), &internalErr) {
+		t.Fatal("expected *errors.CLIError")
+	}
+	if internalErr.Code != errors.CodeInternal {
+		t.Errorf("Code = %q, want %q", internalErr.Code, errors.CodeInternal)
+	}
+}
 
 func TestParseSSHURL(t *testing.T) {
 	tests := []struct {

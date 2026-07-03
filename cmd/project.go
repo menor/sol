@@ -1,6 +1,11 @@
 package cmd
 
 import (
+	"context"
+	stderrors "errors"
+	"net"
+	"net/url"
+
 	"github.com/menor/sol/internal/api"
 	"github.com/menor/sol/internal/errors"
 )
@@ -64,13 +69,28 @@ func (c *ProjectInfoCmd) Run(ctx *Context) error {
 	return ctx.Output(project)
 }
 
-// handleAPIError converts API errors to CLI errors.
+// handleAPIError converts API errors to CLI errors. The api package wraps
+// errors with %w ("get current user: ..."), so unwrap with errors.As, never a
+// type assertion. Transport-level failures (DNS, refused connection, timeout)
+// are operational and retryable — api_unavailable, not a Sol bug. Only errors
+// with no better classification fall through to internal.
 func handleAPIError(err error, resourceType, resourceID string) error {
-	if apiErr, ok := err.(*api.APIError); ok {
+	var apiErr *api.APIError
+	if stderrors.As(err, &apiErr) {
 		if apiErr.StatusCode == 404 {
 			return errors.NewNotFoundError(resourceType, resourceID)
 		}
 		return errors.NewAPIError(apiErr.Message, apiErr.StatusCode)
 	}
+
+	// http.Client wraps every request failure in *url.Error; also catch bare
+	// net.Error and context deadlines from custom transports.
+	var urlErr *url.Error
+	var netErr net.Error
+	if stderrors.As(err, &urlErr) || stderrors.As(err, &netErr) ||
+		stderrors.Is(err, context.DeadlineExceeded) {
+		return errors.NewAPIUnreachableError(err.Error())
+	}
+
 	return errors.NewInternalError(err.Error())
 }

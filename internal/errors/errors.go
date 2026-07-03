@@ -109,8 +109,8 @@ func NewAuthMissingError() *CLIError {
 }
 
 // NewAPIError maps an HTTP status to the closest domain code. 401 is
-// unauthenticated, 403 permission_denied, 404 not_found, 5xx api_unavailable
-// (retryable); anything else is treated as an invalid request.
+// unauthenticated, 403 permission_denied, 404 not_found, 429 and 5xx
+// api_unavailable (retryable); anything else is treated as an invalid request.
 func NewAPIError(message string, statusCode int) *CLIError {
 	err := &CLIError{
 		Message: message,
@@ -123,6 +123,10 @@ func NewAPIError(message string, statusCode int) *CLIError {
 		err.Code = CodePermissionDenied
 	case statusCode == 404:
 		err.Code = CodeNotFound
+	case statusCode == 429:
+		err.Code = CodeAPIUnavailable
+		err.Retryable = true
+		err.Hint = "Rate limited; wait and retry with reduced request frequency"
 	case statusCode >= 500:
 		err.Code = CodeAPIUnavailable
 		err.Retryable = true
@@ -166,14 +170,16 @@ func NewNoEnvironmentError() *CLIError {
 	return err.WithHint("Provide an environment ID or use --environment flag")
 }
 
-func NewRateLimitError(retryAfter int) *CLIError {
+// NewAPIUnreachableError reports a transport-level failure (DNS, refused
+// connection, timeout): the request never got an HTTP answer. Operational and
+// retryable — the identical call may succeed once connectivity recovers.
+func NewAPIUnreachableError(message string) *CLIError {
 	err := &CLIError{
 		Code:      CodeAPIUnavailable,
-		Message:   "API rate limit exceeded",
+		Message:   message,
 		Retryable: true,
-		Details:   map[string]any{"retry_after": retryAfter},
 	}
-	return err.WithHint(fmt.Sprintf("Wait %d seconds or reduce request frequency", retryAfter))
+	return err.WithHint("The Upsun API could not be reached; check connectivity and retry")
 }
 
 // NewOperationFailedError reports that a remote operation reached a non-success
